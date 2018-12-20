@@ -31,7 +31,7 @@ CORE_SUBMODULES= \
     reflection    \
     segmentation  \
     stats         \
-#    tbbwrapper    \
+    tbbwrapper    \
     utils         \
 #    clustering3d  \
 #    features2d    \
