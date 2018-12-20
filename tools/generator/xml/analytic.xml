@@ -1,0 +1,77 @@
+<poco version="5.0">
+  <include name="base.xml"/>
+
+  <enum name="Background Detector">
+    <item name="Previous frame" id="0" />
+    <item name="Old Background" id="1" />
+    <item name="Mixed"          id="2" />
+  </enum>
+
+  <enum name="Force Database Override">
+    <item name="DB ON event"  id="0" />
+    <item name="DB OFF event" id="1" />
+    <item name="FROM DB"      id="2" />
+  </enum>
+
+  <class name="FirstOrderModelParameters" >
+    <field type="bool"   name="modelOn"    defaultValue="false"/>
+    <field type="double" name="sigma"      defaultValue="2"  min="0" max="100"/>
+    <field type="double" name="constdiff"  defaultValue="2"  min="0" max="10000"/>
+  </class>
+
+  <class name="Homography4PointParameters" >
+      <!-- Transformation -->
+      <field type="double" name="canvasX" defaultValue="500" min="0" max="10000" />
+      <field type="double" name="canvasY" defaultValue="500" min="0" max="10000" />
+
+      <field type="double" name="c1x" defaultValue="0" min="-10000" max="10000"/>
+      <field type="double" name="c1y" defaultValue="0" min="-10000" max="10000"/>
+
+      <field type="double" name="c2x" defaultValue="100" min="-10000" max="10000"/>
+      <field type="double" name="c2y" defaultValue="0" min="-10000" max="10000"/>
+
+      <field type="double" name="c3x" defaultValue="100" min="-10000" max="10000"/>
+      <field type="double" name="c3y" defaultValue="100" min="-10000" max="10000"/>
+
+      <field type="double" name="c4x" defaultValue="0" min="-10000" max="10000"/>
+      <field type="double" name="c4y" defaultValue="100" min="-10000" max="10000"/>
+
+  </class>
+
+  <class name="Analytic Parameters" >
+    <field type="int" name="Show Buffer"   defaultValue="0"/>
+    <field type="Background Detector"   name="Algorithm" defaultValue="0"/>
+    <field type="int" name="threshold"  defaultValue="20" min="0" max="1000"/>
+
+
+    <field type="bool" name="homographyOn" defaultValue="false"/>
+    <embed type="Homography4PointParameters" name="homography"/>
+    <embed type="FirstOrderModelParameters" name="modelParameters" />
+
+    <field type="bool" name="Previous Compare On" defaultValue="false"/>
+    <field type="bool" name="Base Compare On"     defaultValue="false"/>
+    <!-- <field type="bool" name="Model Compare On"    defaultValue="false"/> -->
+
+    <field type="bool"   name="Collecting On"  defaultValue="true" comment="Controls if statistics collection switched on"/>
+    <field type="bool"   name="Reacting On"    defaultValue="true" comment="Controls if reaction on deviation switched on"/>
+    <field type="bool"   name="Simulate Delay" defaultValue="true" comment=""/>
+
+    <field type="double" name="Silence Delay" defaultValue="30" min="0" max="600"/>
+
+    <field type="double" name="Movement Threshold"   defaultValue="10.0" min="0.0" max="101.0"/>
+
+    <field type="bool" name="Study On"        defaultValue="false"/>
+    <field type="bool" name="Extra Data On"   defaultValue="false"/>
+
+    <field type="Force Database Override" name="Data source"   defaultValue="2"/>
+
+
+  </class>
+
+  <parametersMapper name="Analytic">
+    <field type="Base Parameters"          name="Base Parameters"/>
+    <field type="Analytic Parameters"      name="Analytic Parameters"/>
+    <field type="Presentation Parameters"  name="Presentation Parameters"/>
+  </parametersMapper>
+</poco>
+

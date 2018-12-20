@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CommonPipelineParametersControlWidget</class>
+ <widget class="QWidget" name="CommonPipelineParametersControlWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>CommonPipelineParameters</string>
+  </property>
+   <layout class="QGridLayout" name="gridLayout">
+    <property name="margin">
+     <number>3</number>
+    </property>
+    <property name="spacing">
+     <number>3</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="QLabel" name="label_0">
+       <property name="text">
+         <string>Pipeline Name</string>
+       </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QLineEdit" name="pipelineNameEdit">
+       <property name="toolTip">
+         <string>Pipeline Name</string>
+       </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_1">
+       <property name="text">
+         <string>Camera name</string>
+       </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="cameraNameEdit">
+       <property name="toolTip">
+         <string>Camera name</string>
+       </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_2">
+       <property name="text">
+         <string>Server address</string>
+       </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="serverAddressEdit">
+       <property name="toolTip">
+         <string>Server address</string>
+       </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_3">
+       <property name="text">
+         <string>fps</string>
+       </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QSpinBox" name="fpsSpinBox">
+       <property name="toolTip">
+         <string>fps</string>
+       </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_4">
+       <property name="text">
+         <string>Global Scale</string>
+       </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QDoubleSpinBox" name="globalScaleSpinBox">
+       <property name="toolTip">
+         <string>Global Scale</string>
+       </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="label_5">
+       <property name="text">
+         <string>Input Stream Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="inputStreamUrlEdit">
+       <property name="toolTip">
+         <string>Input Stream Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QLabel" name="label_6">
+       <property name="text">
+         <string>Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QLineEdit" name="outputUrlEdit">
+       <property name="toolTip">
+         <string>Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="7" column="0">
+     <widget class="QLabel" name="label_7">
+       <property name="text">
+         <string>Source Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="7" column="1">
+     <widget class="QLineEdit" name="sourceOutputUrlEdit">
+       <property name="toolTip">
+         <string>Source Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="8" column="0">
+     <widget class="QLabel" name="label_8">
+       <property name="text">
+         <string>Scaled Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="8" column="1">
+     <widget class="QLineEdit" name="scaledOutputUrlEdit">
+       <property name="toolTip">
+         <string>Scaled Output Url</string>
+       </property>
+     </widget>
+    </item>
+    <item row="9" column="0">
+     <widget class="QLabel" name="label_9">
+       <property name="text">
+         <string>Database Path</string>
+       </property>
+     </widget>
+    </item>
+    <item row="9" column="1">
+     <widget class="QLineEdit" name="databasePathEdit">
+       <property name="toolTip">
+         <string>Database Path</string>
+       </property>
+     </widget>
+    </item>
+    <item row="10" column="0">
+     <widget class="QLabel" name="label_10">
+       <property name="text">
+         <string>Archive Path</string>
+       </property>
+     </widget>
+    </item>
+    <item row="10" column="1">
+     <widget class="QLineEdit" name="archivePathEdit">
+       <property name="toolTip">
+         <string>Archive Path</string>
+       </property>
+     </widget>
+    </item>
+    <item row="11" column="0">
+     <widget class="QLabel" name="label_11">
+       <property name="text">
+         <string>Output Stream Bitrate</string>
+       </property>
+     </widget>
+    </item>
+    <item row="11" column="1">
+     <widget class="QSpinBox" name="outputStreamBitrateSpinBox">
+       <property name="toolTip">
+         <string>Output Stream Bitrate</string>
+       </property>
+     </widget>
+    </item>
+    <item row="12" column="0">
+     <widget class="QLabel" name="label_12">
+       <property name="text">
+         <string>Processing Interval Sec</string>
+       </property>
+     </widget>
+    </item>
+    <item row="12" column="1">
+     <widget class="QSpinBox" name="processingIntervalSecSpinBox">
+       <property name="toolTip">
+         <string>Processing Interval Sec</string>
+       </property>
+     </widget>
+    </item>
+    <item row="13" column="0">
+     <widget class="QLabel" name="label_13">
+       <property name="text">
+         <string>statisticIntervalSec</string>
+       </property>
+     </widget>
+    </item>
+    <item row="13" column="1">
+     <widget class="QSpinBox" name="statisticIntervalSecSpinBox">
+       <property name="toolTip">
+         <string>statisticIntervalSec</string>
+       </property>
+     </widget>
+    </item>
+    <item row="14" column="0">
+     <widget class="QLabel" name="label_14">
+       <property name="text">
+         <string>statisticPeriodDays</string>
+       </property>
+     </widget>
+    </item>
+    <item row="14" column="1">
+     <widget class="QSpinBox" name="statisticPeriodDaysSpinBox">
+       <property name="toolTip">
+         <string>statisticPeriodDays</string>
+       </property>
+     </widget>
+    </item>
+    <item row="15" column="0">
+     <widget class="QLabel" name="label_15">
+       <property name="text">
+         <string>Notification event types</string>
+       </property>
+     </widget>
+    </item>
+    <item row="15" column="1">
+     <widget class="QSpinBox" name="notificationEventTypesSpinBox">
+       <property name="toolTip">
+         <string>Notification event types</string>
+       </property>
+     </widget>
+    </item>
+    <item row="16" column="0">
+     <widget class="QLabel" name="label_16">
+       <property name="text">
+         <string>Notification event level</string>
+       </property>
+     </widget>
+    </item>
+    <item row="16" column="1">
+     <widget class="QSpinBox" name="notificationEventLevelSpinBox">
+       <property name="toolTip">
+         <string>Notification event level</string>
+       </property>
+     </widget>
+    </item>
+    <item row="17" column="0">
+     <widget class="QLabel" name="label_17">
+       <property name="text">
+         <string>Notification method</string>
+       </property>
+     </widget>
+    </item>
+    <item row="17" column="1">
+     <widget class="QLineEdit" name="notificationMethodEdit">
+       <property name="toolTip">
+         <string>Notification method</string>
+       </property>
+     </widget>
+    </item>
+    <item row="18" column="0">
+     <widget class="QLabel" name="label_18">
+       <property name="text">
+         <string>Notification start time</string>
+       </property>
+     </widget>
+    </item>
+    <item row="18" column="1">
+     <widget class="QLineEdit" name="notificationStartTimeEdit">
+       <property name="toolTip">
+         <string>Notification start time</string>
+       </property>
+     </widget>
+    </item>
+    <item row="19" column="0">
+     <widget class="QLabel" name="label_19">
+       <property name="text">
+         <string>Notification end time</string>
+       </property>
+     </widget>
+    </item>
+    <item row="19" column="1">
+     <widget class="QLineEdit" name="notificationEndTimeEdit">
+       <property name="toolTip">
+         <string>Notification end time</string>
+       </property>
+     </widget>
+    </item>
+    <item row="20" column="0">
+     <widget class="QLabel" name="label_20">
+       <property name="text">
+         <string>Notification phone</string>
+       </property>
+     </widget>
+    </item>
+    <item row="20" column="1">
+     <widget class="QLineEdit" name="notificationPhoneEdit">
+       <property name="toolTip">
+         <string>Notification phone</string>
+       </property>
+     </widget>
+    </item>
+    <item row="21" column="0">
+     <widget class="QLabel" name="label_21">
+       <property name="text">
+         <string>Notification email</string>
+       </property>
+     </widget>
+    </item>
+    <item row="21" column="1">
+     <widget class="QLineEdit" name="notificationEmailEdit">
+       <property name="toolTip">
+         <string>Notification email</string>
+       </property>
+     </widget>
+    </item>
+    <item row="22" column="0">
+     <widget class="QLabel" name="label_22">
+       <property name="text">
+         <string>Notification syserr email</string>
+       </property>
+     </widget>
+    </item>
+    <item row="22" column="1">
+     <widget class="QLineEdit" name="notificationSyserrEmailEdit">
+       <property name="toolTip">
+         <string>Notification syserr email</string>
+       </property>
+     </widget>
+    </item>
+    <item row="23" column="0">
+     <widget class="QLabel" name="label_23">
+       <property name="text">
+         <string>Notification sms login</string>
+       </property>
+     </widget>
+    </item>
+    <item row="23" column="1">
+     <widget class="QLineEdit" name="notificationSmsLoginEdit">
+       <property name="toolTip">
+         <string>Notification sms login</string>
+       </property>
+     </widget>
+    </item>
+    <item row="24" column="0">
+     <widget class="QLabel" name="label_24">
+       <property name="text">
+         <string>Notification sms password</string>
+       </property>
+     </widget>
+    </item>
+    <item row="24" column="1">
+     <widget class="QLineEdit" name="notificationSmsPasswordEdit">
+       <property name="toolTip">
+         <string>Notification sms password</string>
+       </property>
+     </widget>
+    </item>
+    <item row="25" column="0">
+     <widget class="QLabel" name="label_25">
+       <property name="text">
+         <string>Notification smtp address</string>
+       </property>
+     </widget>
+    </item>
+    <item row="25" column="1">
+     <widget class="QLineEdit" name="notificationSmtpAddressEdit">
+       <property name="toolTip">
+         <string>Notification smtp address</string>
+       </property>
+     </widget>
+    </item>
+    <item row="26" column="0">
+     <widget class="QLabel" name="label_26">
+       <property name="text">
+         <string>Notification smtp login</string>
+       </property>
+     </widget>
+    </item>
+    <item row="26" column="1">
+     <widget class="QLineEdit" name="notificationSmtpLoginEdit">
+       <property name="toolTip">
+         <string>Notification smtp login</string>
+       </property>
+     </widget>
+    </item>
+    <item row="27" column="0">
+     <widget class="QLabel" name="label_27">
+       <property name="text">
+         <string>Notification smtp password</string>
+       </property>
+     </widget>
+    </item>
+    <item row="27" column="1">
+     <widget class="QLineEdit" name="notificationSmtpPasswordEdit">
+       <property name="toolTip">
+         <string>Notification smtp password</string>
+       </property>
+     </widget>
+    </item>
+   <item row="28" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="28" column="2">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="3" margin="3"/>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pipelineNameEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>cameraNameEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>serverAddressEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>fpsSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>globalScaleSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>inputStreamUrlEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>outputUrlEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>sourceOutputUrlEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>scaledOutputUrlEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>databasePathEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>archivePathEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>outputStreamBitrateSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>processingIntervalSecSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>statisticIntervalSecSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>statisticPeriodDaysSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationEventTypesSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationEventLevelSpinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationMethodEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationStartTimeEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationEndTimeEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationPhoneEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationEmailEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSyserrEmailEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSmsLoginEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSmsPasswordEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSmtpAddressEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSmtpLoginEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+  <connection>
+   <sender>notificationSmtpPasswordEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>CommonPipelineParametersControlWidget</receiver>
+   <slot>changeParameters()</slot>
+  </connection>
+ </connections>
+ <slots>
+  <slot>changeParameters()</slot>
+ </slots>
+ <customwidgets>
+ </customwidgets>
+</ui>
