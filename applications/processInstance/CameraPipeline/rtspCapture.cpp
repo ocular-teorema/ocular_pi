@@ -164,7 +164,13 @@ ErrorCode RTSPCapture::InitCapture()
         return CAMERA_PIPELINE_ERROR;
     }
 
-    av_dict_set(&inputOptions, "rtsp_transport", "tcp", 0);
+    // If we are going to analyze input frames - we set tcp transport to get rid of broken frames in stream
+    // (but this will increase bandwidth)
+    if (m_doDecoding)
+    {
+        av_dict_set(&inputOptions, "rtsp_transport", "tcp", 0);
+    }
+
     res = avformat_open_input(&m_pInputContext, m_rtspUri.toLatin1().data(), NULL, &inputOptions);
     av_dict_free(&inputOptions);
 
