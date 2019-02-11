@@ -7,7 +7,6 @@ ResultVideoOutput::ResultVideoOutput(QString outputURL) :
     pWebSocketServer(NULL),
     m_outputUrl(outputURL),
     m_outputInitialized(false),
-    m_pH264bsf(NULL),
     m_pFormatCtx(NULL),
     m_pVideoStream(NULL),
     m_pAVIOCtx(NULL),
@@ -190,22 +189,6 @@ void ResultVideoOutput::Open(AVStream* pInStream)
 
         // Set encoding parameters
         avcodec_parameters_copy(m_pVideoStream->codecpar, pCodecParams);
-
-        // Open bitstream filter
-        if (0 != av_bsf_alloc(av_bsf_get_by_name("h264_mp4toannexb"), &m_pH264bsf))
-        {
-            ERROR_MESSAGE0(ERR_TYPE_ERROR, "ResultVideoOutput", "Could not allocate bitstream filter");
-            return;
-        }
-
-        avcodec_parameters_copy(m_pH264bsf->par_in, pCodecParams);
-        m_pH264bsf->time_base_in = m_pVideoStream->time_base;
-
-        if (0 != av_bsf_init(m_pH264bsf))
-        {
-            ERROR_MESSAGE0(ERR_TYPE_ERROR, "ResultVideoOutput", "Could not initialize bitstream filter");
-            return;
-        }
     }
     else
     {
@@ -293,12 +276,6 @@ void ResultVideoOutput::WritePacket(QSharedPointer<AVPacket> pInPacket)
     // per each av_interleaved_write_frame() call
     lastSentTimestamp = pPacket->pts;
 
-    if (m_pH264bsf != NULL)
-    {
-        av_bsf_send_packet(m_pH264bsf, pPacket);
-        av_bsf_receive_packet(m_pH264bsf, pPacket);
-    }
-
     int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
     av_packet_free(&pPacket);
     if (res < 0)
@@ -332,7 +309,6 @@ void ResultVideoOutput::Close()
             av_freep(&m_pAVIOCtx->buffer);
             av_freep(&m_pAVIOCtx);
         }
-        av_bsf_free(&m_pH264bsf);
         SAFE_DELETE(pWebSocketServer);
         m_outputInitialized = false;
     }

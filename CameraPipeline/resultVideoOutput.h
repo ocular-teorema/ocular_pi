@@ -41,7 +41,6 @@ private:
     bool                m_outputInitialized;    /// indicates, if output format initialized correctly
 
     /// AVLib stuff
-    AVBSFContext*       m_pH264bsf;
     AVFormatContext*    m_pFormatCtx;
     AVStream*           m_pVideoStream;
     AVRational          m_inputTimeBase;
