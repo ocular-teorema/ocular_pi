@@ -27,7 +27,7 @@ public:
 private:
     QQueue<int64_t> m_startTimeQueue;
     QQueue<QString> m_fileNamesQueue;
-    QVector<QSharedPointer<AVPacket>> m_pPackets;
+    QVector<QSharedPointer<AVPacket> > m_pPackets;
 
     int         m_bufferSize;
     int         m_packetsWritten;
