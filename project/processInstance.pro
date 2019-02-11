@@ -68,6 +68,8 @@ SOURCES += \
     ../videoAnalysis/videoScaler.cpp \
     ../networkUtils/dataDirectory.cpp
 
+QMAKE_CXXFLAGS += -std=gnu++11
+
 # LIBS
 LIBS +=  -L/usr/lib
 LIBS +=  -lavformat -lavcodec -lavutil -lswresample -lswscale -lxcb-xfixes -lxcb-render -lxcb-shape -lxcb -lX11 -lx264 -lm -lz
