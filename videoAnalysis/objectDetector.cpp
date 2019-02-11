@@ -2,11 +2,8 @@
 
 #include "objectDetector.h"
 
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 ObjectDetector::ObjectDetector() :
     pFGMask(NULL),
@@ -58,7 +55,7 @@ void ObjectDetector::Exec(VideoFrame *pCurFrame, VideoFrame *pPrevFrame, MotionF
     cv::Mat pFGMat(pFGMask->GetHeight(), pFGMask->GetWidth(), CV_8UC1, pFGMask->GetPlaneData(), pFGMask->GetStride());
     cv::Mat labelImage(pFGMat.size(), CV_32S);
 
-    int nLabels = cv::connectedComponents(pFGMat, labelImage, 8);
+    int nLabels = connectedComponents(pFGMat, labelImage, 8);
 
     // Filtering objects less than 2 blocks 8x8 (which are used for motion analysis)
     for (int n = 1; n <= nLabels; n++)
