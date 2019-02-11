@@ -33,6 +33,12 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     pProcessingThread = new QThread();
     pHealthCheckThread = new QThread();
 
+    QObject::connect(pCaptureThread, SIGNAL(finished()), pCaptureThread, SLOT(deleteLater()));
+    QObject::connect(pRecorderThread, SIGNAL(finished()), pRecorderThread, SLOT(deleteLater()));
+    QObject::connect(pStatisticThread, SIGNAL(finished()), pStatisticThread, SLOT(deleteLater()));
+    QObject::connect(pProcessingThread, SIGNAL(finished()), pProcessingThread, SLOT(deleteLater()));
+    QObject::connect(pHealthCheckThread, SIGNAL(finished()), pHealthCheckThread, SLOT(deleteLater()));
+
     // Create FrameBuffer to pass it to capture and analyzing objects
     pFrameBuffer = new FrameCircularBuffer(DEFAULT_FRAME_BUFFER_SIZE);
 
@@ -113,26 +119,26 @@ CameraPipeline::~CameraPipeline()
 {
     DEBUG_MESSAGE0("CameraPipeline", "~CameraPipeline() called");
 
-    if (!pProcessingThread->wait(100))
-        pProcessingThread->terminate();
-
-    if (!pHealthCheckThread->wait(100))
-        pHealthCheckThread->terminate();
-
-    if (!pStatisticThread->wait(100))
-        pStatisticThread->terminate();
-
-    if (!pRecorderThread->wait(100))
-        pRecorderThread->terminate();
-
-    if (!pCaptureThread->wait(100))
+    // Stop all processing threads
+    pCaptureThread->quit();
+    if (!pCaptureThread->wait(500))
         pCaptureThread->terminate();
 
-    delete pCaptureThread;
-    delete pRecorderThread;
-    delete pStatisticThread;
-    delete pProcessingThread;
-    delete pHealthCheckThread;
+    pProcessingThread->quit();
+    if (!pProcessingThread->wait(500))
+        pProcessingThread->terminate();
+
+    pHealthCheckThread->quit();
+    if (!pHealthCheckThread->wait(500))
+        pHealthCheckThread->terminate();
+
+    pStatisticThread->quit();
+    if (!pStatisticThread->wait(500))
+        pStatisticThread->terminate();
+
+    pRecorderThread->quit();
+    if (!pRecorderThread->wait(500))
+        pRecorderThread->terminate();
 
     delete pFrameBuffer;
     DEBUG_MESSAGE0("CameraPipeline", "~CameraPipeline() finished");
@@ -148,6 +154,13 @@ void CameraPipeline::ConnectSignals()
     QObject::connect(pStreamRecorder,  SIGNAL(Ping(const char*, int)), pHealthChecker, SLOT(Pong(const char*, int)));
     QObject::connect(pVideoAnalyzer,   SIGNAL(Ping(const char*, int)), pHealthChecker, SLOT(Pong(const char*, int)));
     QObject::connect(pStatisticDBIntf, SIGNAL(Ping(const char*, int)), pHealthChecker, SLOT(Pong(const char*, int)));
+
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pRtspCapture, SLOT(StopCapture()));
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pVideoAnalyzer, SLOT(StopAnalyze()));
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pSourceOutput, SLOT(Close()));
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pResultOutput, SLOT(Close()));
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pStreamRecorder, SLOT(Close()));
+    QObject::connect(this, SIGNAL(ProcessingStopped()), pHealthChecker, SLOT(Stop()));
 
     // We should restart on timeout erros and fire notifications!
     QObject::connect(pHealthChecker, SIGNAL(TimeoutDetected(QString)), this, SLOT(TimeoutHappened(QString)));
@@ -225,50 +238,17 @@ void CameraPipeline::ConnectSignals()
     }
 }
 
-void CameraPipeline::DisconnectSignals()
-{
-    // Disconnect all objects
-    pRtspCapture->disconnect();
-    pVideoAnalyzer->disconnect();
-    pVideoStatistics->disconnect();
-    pStatisticDBIntf->disconnect();
-    pEventHandler->disconnect();
-    pSourceOutput->disconnect();
-    pResultOutput->disconnect();
-    pStreamRecorder->disconnect();
-    DataDirectoryInstance::instance()->disconnect();
-}
-
 void CameraPipeline::StopPipeline()
 {
     ERROR_MESSAGE0(ERR_TYPE_WARNING, "CameraPipeline","CameraPipeline StopPipeline() called");
 
     if (m_isRunning)
     {
-        // RtspCapture instance in now running in other thread,
-        // So, we cannot just call pRtspCapture->StopCapture(),
-        // But we should perform QMetaObject::invokeMethod() instead
-        // Also we need to close result output context, stop stream recorder, health checker and event notifier
-        QMetaObject::invokeMethod(pVideoAnalyzer, "StopAnalyze", Qt::QueuedConnection);
-        QMetaObject::invokeMethod(pRtspCapture,   "StopCapture", Qt::QueuedConnection);
-        QMetaObject::invokeMethod(pSourceOutput,  "Close",       Qt::QueuedConnection);
-        QMetaObject::invokeMethod(pResultOutput,  "Close",       Qt::QueuedConnection);
-        QMetaObject::invokeMethod(pStreamRecorder,"Close",       Qt::QueuedConnection);
-        QMetaObject::invokeMethod(pHealthChecker, "Stop",        Qt::QueuedConnection);
-
-        // Stop all processing threads
-        pHealthCheckThread->quit();
-        pProcessingThread->quit();
-        pStatisticThread->quit();
-        pRecorderThread->quit();
-        pCaptureThread->quit();
-
         m_isRunning = false;
-
         // Tell, that we are through
         emit ProcessingStopped();
+        QThread::msleep(5000); // sleep for a while
     }
-    QThread::msleep(1000); // Waiting here is just in case
 }
 
 void CameraPipeline::PausePipeline()

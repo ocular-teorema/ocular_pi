@@ -8,6 +8,7 @@ VideoAnalyzer::VideoAnalyzer(FrameCircularBuffer *pFrameBuffer) :
     QObject(NULL),
     m_pInputFrameBuffer(pFrameBuffer),
     m_pProcessingTimer(NULL),
+    m_pObjectDetector(NULL),
     m_pMotionEstimator(NULL)
 {
 
@@ -16,7 +17,6 @@ VideoAnalyzer::VideoAnalyzer(FrameCircularBuffer *pFrameBuffer) :
 VideoAnalyzer::~VideoAnalyzer()
 {
     DEBUG_MESSAGE0("VideoAnalyzer", "~VideoAnalyzer() called");
-    SAFE_DELETE(m_pDenoiseFilter);
     SAFE_DELETE(m_pObjectDetector);
     SAFE_DELETE(m_pMotionEstimator);
     SAFE_DELETE(m_pProcessingTimer);
@@ -119,5 +119,4 @@ void VideoAnalyzer::DoAnalyze()
 void VideoAnalyzer::ProcessNewStats(QList<IntervalStatistics *> curStatsList)
 {
     Q_UNUSED(curStatsList);
-    m_motionMap.Reset();
 }

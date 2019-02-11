@@ -19,21 +19,7 @@ ResultVideoOutput::ResultVideoOutput(QString outputURL) :
 ResultVideoOutput::~ResultVideoOutput()
 {
     DEBUG_MESSAGE0("ResultVideoOutput", "~ResultVideoOutput() called");
-    if(NULL != m_pFormatCtx)
-    {
-        avformat_free_context(m_pFormatCtx);
-        m_pFormatCtx = NULL;
-    }
-
-    if (nullptr != m_pAVIOCtx) // note: the internal buffer could have changed, and be != pAvioCtxBuffer
-    {
-        av_freep(&m_pAVIOCtx->buffer);
-        av_freep(&m_pAVIOCtx);
-    }
-    SAFE_DELETE(m_pH264bsf);
-
     avcodec_parameters_free(&m_pEncoderParams);
-    SAFE_DELETE(pWebSocketServer);
     DEBUG_MESSAGE0("ResultVideoOutput", "~ResultVideoOutput() finished");
 }
 
@@ -41,17 +27,21 @@ void ResultVideoOutput::OnWsConnected()
 {
     QWebSocket *pSocket = pWebSocketServer->nextPendingConnection();
 
-    qDebug() << "Connection established from " << pSocket->peerAddress().toString();
-    connect(pSocket, SIGNAL(disconnected()), this, SLOT(OnWsDisconnected()));
-    clients << pSocket;
-
-    // Sent initial data
-    QByteArray array(4, 0);
-    int fps = (DataDirectoryInstance::instance())->pipelineParams.fps;
-    memcpy(array.data(), &fps, 4);
-    pSocket->sendBinaryMessage(array);
-
-    qDebug() << "Number of active connections is " << clients.size();
+    if (!initialFragments.size())
+    {
+        ERROR_MESSAGE0(ERR_TYPE_DISPOSABLE, "ResultVideoOutput",
+                       "Client connected before initial fragments have been generated");
+        pSocket->disconnect();
+    }
+    else
+    {
+        qDebug() << "Connection established from " << pSocket->peerAddress().toString();
+        connect(pSocket, SIGNAL(disconnected()), this, SLOT(OnWsDisconnected()));
+        clients << pSocket;
+        // Sent initial data
+        pSocket->sendBinaryMessage(initialFragments);
+        qDebug() << "Number of active connections is " << clients.size();
+    }
 }
 
 void ResultVideoOutput::OnWsDisconnected()
@@ -70,12 +60,38 @@ static int WritePacketCallback(void* opaque, uint8_t* buf, int size)
 {
     ResultVideoOutput* pOutput = reinterpret_cast<ResultVideoOutput*>(opaque);
 
-    // Byte array with frame's actual pts
-    QByteArray pts((char *)&pOutput->lastSentTimestamp, 8);
+    const uint8_t ftypTag[4] = {'f','t','y','p'};
+    const uint8_t moovTag[4] = {'m','o','o','v'};
+    const uint8_t sidxTag[4] = {'s','i','d','x'};
+    const uint8_t moofTag[4] = {'m','o','o','f'};
 
-    Q_FOREACH (QWebSocket* client, pOutput->clients)
+    if (size < 8)
     {
-        client->sendBinaryMessage(QByteArray((char *)buf, size).append(pts));
+        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "ResultVideoOutput", "Too short fragment passed to callback");
+    }
+
+    // FTYP
+    if (!memcmp(buf + 4, ftypTag, 4))
+    {
+        pOutput->initialFragments.clear();
+        pOutput->initialFragments.append(QByteArray((char *)buf, size));
+    }
+    // MOOV
+    else if (!memcmp(buf + 4, moovTag, 4))
+    {
+        pOutput->initialFragments.append(QByteArray((char *)buf, size));
+    }
+    // MOOF (or sidx+moov)
+    else if (!memcmp(buf + 4, moofTag, 4) || !memcmp(buf + 4, sidxTag, 4))
+    {
+        Q_FOREACH (QWebSocket* client, pOutput->clients)
+        {
+            client->sendBinaryMessage(QByteArray((char *)buf, size));
+        }
+    }
+    else
+    {
+        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "ResultVideoOutput", "Unsupported fragment type received");
     }
     return size;
 }
@@ -283,7 +299,8 @@ void ResultVideoOutput::WritePacket(QSharedPointer<AVPacket> pInPacket)
         av_bsf_receive_packet(m_pH264bsf, pPacket);
     }
 
-    int res = av_interleaved_write_frame(m_pFormatCtx, pPacket); // this call should also unref passed avpacket
+    int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
+    av_packet_free(&pPacket);
     if (res < 0)
     {
         char err[255] = {0};
@@ -299,12 +316,25 @@ void ResultVideoOutput::Close()
     DEBUG_MESSAGE0("ResultVideoOutput", "CloseOutput() called");
     if (m_outputInitialized)
     {
-        av_write_trailer(m_pFormatCtx);
-        if (m_pFormatCtx && !(m_pFormatCtx->oformat->flags & AVFMT_NOFILE))
+        if (NULL != m_pFormatCtx)
         {
-            avio_closep(&m_pFormatCtx->pb);
+            av_write_trailer(m_pFormatCtx);
+            if (!(m_pFormatCtx->flags & AVFMT_FLAG_CUSTOM_IO))
+            {
+                avio_closep(&m_pFormatCtx->pb);
+            }
+            avformat_free_context(m_pFormatCtx);
+            m_pFormatCtx = NULL;
         }
+
+        if (NULL != m_pAVIOCtx) // note: the internal buffer could have changed, and be != pAvioCtxBuffer
+        {
+            av_freep(&m_pAVIOCtx->buffer);
+            av_freep(&m_pAVIOCtx);
+        }
+        av_bsf_free(&m_pH264bsf);
+        SAFE_DELETE(pWebSocketServer);
         m_outputInitialized = false;
     }
+    DEBUG_MESSAGE0("ResultVideoOutput", "CloseOutput() finished");
 }
-

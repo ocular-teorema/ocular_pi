@@ -229,7 +229,9 @@ void StreamRecorder::WritePacket(QSharedPointer<AVPacket> pInPacket)
         pPacket->dts -= m_firstDts;
         pPacket->stream_index = 0; // Default video stream index
         av_packet_rescale_ts(pPacket, m_inputTimebase, m_pVideoStream->time_base);
-        if (0 > av_interleaved_write_frame(m_pFormatCtx, pPacket))
+        int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
+        av_packet_free(&pPacket);
+        if (res < 0)
         {
             ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "av_interleaved_write_frame() failed");
             return;
@@ -269,6 +271,7 @@ void StreamRecorder::WriteEventFile(EventDescription event)
 
 PacketBuffer::PacketBuffer()
 {
+    inputCodecParams = NULL;
     m_currentIndex = 0;
     m_packetsWritten = 0;
     m_bufferSize = PACKET_BUFFER_SECONDS * 30; // Assuming 30 fps is maximum that we will have
@@ -278,6 +281,7 @@ PacketBuffer::PacketBuffer()
 
 PacketBuffer::~PacketBuffer()
 {
+    avcodec_parameters_free(&inputCodecParams);
     m_pPackets.clear();
 }
 

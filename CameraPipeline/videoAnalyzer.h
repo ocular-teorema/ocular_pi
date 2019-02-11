@@ -47,11 +47,6 @@ private:
 
     ObjectDetector*         m_pObjectDetector;      /// Object detector and tracker
     MotionEstimator*        m_pMotionEstimator;     /// Motion estimator
-    DenoiseFilter*          m_pDenoiseFilter;       /// Denoise filter
-
-                        /// Debug motion map
-                        MotionMap   m_motionMap;
-                        VideoBuffer m_tmpBuffer;
 
     void ProcessFrame(VideoFrame* pCurFrame);    /// Processing algorithms here
 };

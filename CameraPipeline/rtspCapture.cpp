@@ -291,8 +291,10 @@ void RTSPCapture::CaptureNewFrame()
 
             pPacket->pos = QDateTime::currentMSecsSinceEpoch(); // Set server's timestamp to packet
 
-            emit NewPacketReceived(pPacket);    // Send new packet signal
-
+            if (!m_stop)
+            {
+                emit NewPacketReceived(pPacket);    // Send new packet signal
+            }
             // Exit reading while
             break;
         }
@@ -387,7 +389,7 @@ void RTSPCapture::SetPause(bool on)
 {
     if (on)
     {
-        DEBUG_MESSAGE0("RTSPCapture", "SetPause(true) called, pauseing");
+        DEBUG_MESSAGE0("RTSPCapture", "SetPause(true) called, pausing");
         m_pCaptureTimer->stop();
     }
     else
