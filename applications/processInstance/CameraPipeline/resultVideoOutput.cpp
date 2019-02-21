@@ -274,7 +274,8 @@ void ResultVideoOutput::WritePacket(QSharedPointer<AVPacket> pInPacket)
         av_bsf_receive_packet(m_pH264bsf, pPacket);
     }
 
-    int res = av_interleaved_write_frame(m_pFormatCtx, pPacket); // this call should also unref passed avpacket
+    int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
+    av_packet_free(&pPacket);
     if (res < 0)
     {
         char err[255] = {0};

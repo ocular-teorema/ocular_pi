@@ -230,7 +230,9 @@ void StreamRecorder::WritePacket(QSharedPointer<AVPacket> pInPacket)
         pPacket->dts -= m_firstDts;
         pPacket->stream_index = 0; // Default video stream index
         av_packet_rescale_ts(pPacket, m_inputTimebase, m_pVideoStream->time_base);
-        if (0 > av_interleaved_write_frame(m_pFormatCtx, pPacket))
+        int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
+        av_packet_free(&pPacket);
+        if (0 > res)
         {
             ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "av_interleaved_write_frame() failed");
             return;
@@ -396,9 +398,11 @@ void PacketBuffer::Write10SecFile(int64_t startTime, QString fileName)
         {
             ERROR_MESSAGE0(ERR_TYPE_DISPOSABLE, "StreamRecorder::PacketBuffer",
                            "Error writing event fragment file av_interleaved_write_frame() failed");
+            av_packet_free(&pPacket);
             avformat_free_context(pFormatCtx);
             return;
         }
+        av_packet_free(&pPacket);
         packetIndex = (packetIndex + 1) % m_bufferSize;
     }
 
