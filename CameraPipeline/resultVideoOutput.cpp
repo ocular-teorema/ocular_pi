@@ -271,11 +271,6 @@ void ResultVideoOutput::WritePacket(QSharedPointer<AVPacket> pInPacket)
     pPacket->pts -= m_firstDts;
     av_packet_rescale_ts(pPacket, m_inputTimeBase, m_pVideoStream->time_base);
 
-    // Store frame timestamp
-    // We are strongly counting on single call of WritePacketCallback
-    // per each av_interleaved_write_frame() call
-    lastSentTimestamp = pPacket->pts;
-
     int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
     av_packet_free(&pPacket);
     if (res < 0)

@@ -10,7 +10,7 @@
 
 class AnalysisResults;
 
-#define  DEFAULT_AVIO_BUFSIZE    (1024*1024)    // 1m buffer to be sure that it is enough for single video frame
+#define  DEFAULT_AVIO_BUFSIZE    (1024*1024*16)    // 16m buffer should be enough for single gop fragment
 
 class ResultVideoOutput : public QObject
 {
@@ -21,9 +21,6 @@ public:
 
     // Output to framented mp4 using websockets
     QByteArray          initialFragments;
-    QQueue<QByteArray>  bufferedData;
-    int64_t             lastSentTimestamp;
-
     QWebSocketServer*   pWebSocketServer;
     QList<QWebSocket*>  clients;
 
