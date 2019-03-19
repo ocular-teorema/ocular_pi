@@ -77,7 +77,7 @@ class AnalysisRecordSQLiteDao : public QObject, public AnalysisRecordDAO
 public:
      ~AnalysisRecordSQLiteDao();
 
-    static AnalysisRecordSQLiteDao* Instance(const QString& dbPath);
+    static AnalysisRecordSQLiteDao* Instance();
     static void Drop();
 
     virtual ErrorCode   InsertRecord(const AnalysisRecordModel &record);
@@ -103,14 +103,13 @@ public:
                                 QList<EventDescription>& results);
 
 private:
-    AnalysisRecordSQLiteDao(const QString &dbPath);
+    AnalysisRecordSQLiteDao();
 
     AnalysisRecordSQLiteDao(const AnalysisRecordSQLiteDao& );               // hide copy constructor
     AnalysisRecordSQLiteDao& operator=(const AnalysisRecordSQLiteDao& );    // hide assign op
 
     static AnalysisRecordSQLiteDao* m_instance;
 
-    QFileInfo       m_dbFile;
     QSqlDatabase    m_DB;
 };
 

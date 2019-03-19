@@ -11,11 +11,6 @@ EventHandler::EventHandler() :
 {
     DEBUG_MESSAGE0("EventHandler", "EventHandler() called");
 
-    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
-
-    QString dbPath = pDataDirectory->pipelineParams.databasePath;
-    m_DB = AnalysisRecordSQLiteDao::Instance(dbPath);
-
     pAreaEventHandler = new AreaEventHandler();
     pMotionEventHandler = new MotionEventHandler();
     pCalibEventHandler = new CalibEventHandler();
@@ -101,8 +96,7 @@ void EventHandler::OpenEvent(EventDescription* event)
 
 void EventHandler::CloseEvent(EventDescription* event)
 {
-    m_DB->storeEvent(*event);    // Write event to the DB
-
+    //(AnalysisRecordSQLiteDao::Instance())->storeEvent(*event);    // Write event to the DB
     ERROR_MESSAGE5(ERR_TYPE_MESSAGE,
                    "EventHandler",
                    "Event closed { id = %d, type = %s, duration = %lld sec, confidence = %d, reaction = %s }",

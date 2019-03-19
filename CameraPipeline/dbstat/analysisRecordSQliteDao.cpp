@@ -18,13 +18,13 @@
 
 AnalysisRecordSQLiteDao* AnalysisRecordSQLiteDao::m_instance = NULL;
 
-AnalysisRecordSQLiteDao::AnalysisRecordSQLiteDao(const QString& dbPath) : m_dbFile(dbPath)
+AnalysisRecordSQLiteDao::AnalysisRecordSQLiteDao()
 {
     DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "AnalysisRecordSQLiteDao() called");
     m_DB = QSqlDatabase::addDatabase("QPSQL");
     m_DB.setHostName("localhost");
     m_DB.setPort(5432);
-    m_DB.setDatabaseName(dbPath);
+    m_DB.setDatabaseName((DataDirectoryInstance::instance())->pipelineParams.databasePath);
     m_DB.setUserName("va");
     m_DB.setPassword("theorema");
     m_DB.open();
@@ -48,14 +48,14 @@ AnalysisRecordSQLiteDao::~AnalysisRecordSQLiteDao()
     DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "~AnalysisRecordSQLiteDao() finished");
 }
 
-AnalysisRecordSQLiteDao *AnalysisRecordSQLiteDao::Instance(const QString &dbPath)
+AnalysisRecordSQLiteDao *AnalysisRecordSQLiteDao::Instance()
 {
     static QMutex mutex;
     if (NULL == m_instance)
     {
         mutex.lock();
 
-        m_instance = new AnalysisRecordSQLiteDao(dbPath);
+        m_instance = new AnalysisRecordSQLiteDao();
 
         mutex.unlock();
     }

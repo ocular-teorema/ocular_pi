@@ -223,6 +223,7 @@ void CameraPipeline::ConnectSignals()
                          pEventHandler, SLOT(ProcessIntervalStats(QList<IntervalStatistics*>)));
 
         // Interaction between Event handler and frontend (via DataDirectory)
+        qRegisterMetaType<EventDescription>("EventDescription");
         QObject::connect(pEventHandler,  SIGNAL(EventStarted(EventDescription)),
                          pDataDirectory, SLOT  (eventHandler(EventDescription)));
 

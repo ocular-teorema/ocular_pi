@@ -395,10 +395,13 @@ void PacketBuffer::Write10SecFile(int64_t startTime, QString fileName)
         pPacket->pts -= firstDts;
         av_packet_rescale_ts(pPacket, inputTimeBase, pStream->time_base);
 
-        if (0 != av_interleaved_write_frame(pFormatCtx, pPacket))
+        int res = av_interleaved_write_frame(pFormatCtx, pPacket);
+        av_packet_free(&pPacket);
+
+        if (res < 0)
         {
             ERROR_MESSAGE0(ERR_TYPE_DISPOSABLE, "StreamRecorder::PacketBuffer",
-                           "Error writing event fragment file av_interleaved_write_frame() failed");
+                           "Error writing event fragment file: av_interleaved_write_frame() failed");
             avformat_free_context(pFormatCtx);
             return;
         }

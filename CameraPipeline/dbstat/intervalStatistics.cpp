@@ -213,10 +213,6 @@ void VideoStatistics::ProcessAnalyzedFrame(VideoFrame *pCurrentFrame, AnalysisRe
 
 StatisticDBInterface::StatisticDBInterface() : QObject(NULL)
 {
-    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
-    QString dbPath = pDataDirectory->pipelineParams.databasePath;
-    m_DB = AnalysisRecordSQLiteDao::Instance(dbPath);
-
     // Initialize random number generator with int value from pointer
     // should be different for different application instances
     size_t  seed = (size_t)this;
@@ -227,14 +223,13 @@ StatisticDBInterface::~StatisticDBInterface()
 {
     DEBUG_MESSAGE0("StatisticDBInterface", "~StatisticDBInterface() called");
 
-    m_DB->Drop();
-
     while (!m_currentPeriodStatistic.isEmpty()) // Delete all previously allocated entries in stat list
     {
         delete m_currentPeriodStatistic.takeFirst();
     }
     m_currentPeriodStatistic.clear();
 
+    (AnalysisRecordSQLiteDao::Instance())->Drop();
     DEBUG_MESSAGE0("StatisticDBInterface", "~StatisticDBInterface() finished");
 }
 
@@ -269,7 +264,8 @@ void StatisticDBInterface::DelayedGet()
     processingTimer.restart();
     DEBUG_MESSAGE1("StatisticDBInterface", "DelayedGet() called ThreadID = %p", QThread::currentThreadId());
 
-    if(CAMERA_PIPELINE_OK != m_DB->FindStatsForPeriod(m_statisticsToGetTime, periodDays, intervalSeconds, recordsList))
+    if(CAMERA_PIPELINE_OK != (AnalysisRecordSQLiteDao::Instance())->FindStatsForPeriod(
+                m_statisticsToGetTime, periodDays, intervalSeconds, recordsList))
     {
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Failed to get statistics for given period");
     }
@@ -363,7 +359,7 @@ void StatisticDBInterface::DelayedWrite()
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Unable to convert collected statistics to BLOB");
     }
 
-    m_DB->InsertRecord(newRecord);
+    (AnalysisRecordSQLiteDao::Instance())->InsertRecord(newRecord);
 
     // Send ping to health checker that write statistics is working
     emit Ping("WriteStatistic", 30*60*1000); // Timeout = 30 min

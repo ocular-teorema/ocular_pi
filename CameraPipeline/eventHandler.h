@@ -109,8 +109,6 @@ public slots:
     void    CloseEvent(EventDescription* event);
 
 private:
-    AnalysisRecordSQLiteDao*    m_DB;                   /// Database instance for storing events
-
     int                         m_continiousEventId;    /// Events should have continious numeration in DB
 
     VideoFrame                  m_outputFrame;          /// Copy of frame to draw results and send it to output

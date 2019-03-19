@@ -33,7 +33,6 @@ private slots:
     void  DelayedWrite();
 
 private:
-    AnalysisRecordSQLiteDao*    m_DB;                       /// Database instance
     QList<IntervalStatistics *> m_currentPeriodStatistic;   /// Current period statistic
     QString                     m_archiveFileName;          /// Actual archive file name from stream recorder
 
