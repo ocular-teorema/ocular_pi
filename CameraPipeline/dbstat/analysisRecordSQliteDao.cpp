@@ -16,9 +16,7 @@
 
 #define ALIGN_TO_SEC(n)  (((n)/1000)*1000)
 
-AnalysisRecordSQLiteDao* AnalysisRecordSQLiteDao::m_instance = NULL;
-
-AnalysisRecordSQLiteDao::AnalysisRecordSQLiteDao()
+AnalysisRecordDao::AnalysisRecordDao()
 {
     DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "AnalysisRecordSQLiteDao() called");
     m_DB = QSqlDatabase::addDatabase("QPSQL");
@@ -35,45 +33,20 @@ AnalysisRecordSQLiteDao::AnalysisRecordSQLiteDao()
     if (!m_DB.isOpen())
     {
         ERROR_MESSAGE1(ERR_TYPE_CRITICAL,
-                       "AnalysisRecordSQLiteDao",
+                       "AnalysisRecordDao",
                        "Failed to open database: %s",
                        m_DB.lastError().text().toUtf8().constData());
     }
 }
 
-AnalysisRecordSQLiteDao::~AnalysisRecordSQLiteDao()
+AnalysisRecordDao::~AnalysisRecordDao()
 {
-    DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "~AnalysisRecordSQLiteDao() called");
+    DEBUG_MESSAGE0("AnalysisRecordDao", "~AnalysisRecordDao() called");
     m_DB.close();
-    DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "~AnalysisRecordSQLiteDao() finished");
+    DEBUG_MESSAGE0("AnalysisRecordDao", "~AnalysisRecordDao() finished");
 }
 
-AnalysisRecordSQLiteDao *AnalysisRecordSQLiteDao::Instance()
-{
-    static QMutex mutex;
-    if (NULL == m_instance)
-    {
-        mutex.lock();
-
-        m_instance = new AnalysisRecordSQLiteDao();
-
-        mutex.unlock();
-    }
-    return m_instance;
-}
-
-void AnalysisRecordSQLiteDao::Drop()
-{
-    static QMutex mutex;
-    mutex.lock();
-
-    delete m_instance;
-    m_instance = NULL;
-
-    mutex.unlock();
-}
-
-ErrorCode AnalysisRecordSQLiteDao::InsertRecord(const AnalysisRecordModel& record)
+ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
 {
     QSqlQuery   query;
     QByteArray  heatmap;
@@ -159,7 +132,7 @@ ErrorCode AnalysisRecordSQLiteDao::InsertRecord(const AnalysisRecordModel& recor
     return CAMERA_PIPELINE_OK;
 }
 
-ErrorCode AnalysisRecordSQLiteDao::FindStatsForPeriod(
+ErrorCode AnalysisRecordDao::FindStatsForPeriod(
     const QDateTime&              curDateTime,
     int                           periodDays,
     int                           intervalSeconds,
@@ -247,169 +220,7 @@ ErrorCode AnalysisRecordSQLiteDao::FindStatsForPeriod(
     return CAMERA_PIPELINE_OK;
 }
 
-ErrorCode AnalysisRecordSQLiteDao::metaForPeriod(QDate startDate, QDate endDate, QTime startTime, QTime endTime, QList<AnalysisRecordModel *> &results)
-{
-    DataDirectory*            pDataDirectory = DataDirectoryInstance::instance();
-    // If we have analysis - it means that archive info can be taken from DB
-    if (pDataDirectory->analysisParams.motionBasedAnalysis ||
-        pDataDirectory->analysisParams.differenceBasedAnalysis)
-    {
-        QSqlQuery   query;
-        QString     sql = "SELECT  id, date, start_time, end_time, media_source, video_archive FROM records WHERE ";
-
-        sql += "( cam = '";
-        sql += (DataDirectoryInstance::instance())->pipelineParams.pipelineName;
-        sql += "' AND ";
-
-        sql += " date >= ";
-        sql += QString::number(startDate.toJulianDay());
-        sql += " AND date <= ";
-        sql += QString::number(endDate.toJulianDay());
-        sql += " AND start_time >= ";
-        sql += QString::number(ALIGN_TO_SEC(startTime.msecsSinceStartOfDay())); // We need to have aligned start an end time (without miliseconds)
-        sql += " AND start_time < ";
-        sql += QString::number(ALIGN_TO_SEC(endTime.msecsSinceStartOfDay()));
-        sql += " )";
-
-        // This "forward only" drastically increases results parsing speed
-        query.setForwardOnly(true);
-
-        query.prepare(sql);
-
-        if (query.exec())
-        {
-            results.clear();
-
-            while(query.next())
-            {
-                AnalysisRecordModel* pRecord = new AnalysisRecordModel; // Memory must be deleted by user after usage
-
-                pRecord->id             = query.value(0).toInt();
-                pRecord->date           = QDate::fromJulianDay(query.value(1).toInt());
-                pRecord->startTime      = QTime::fromMSecsSinceStartOfDay(ALIGN_TO_SEC(query.value(2).toInt()));
-                pRecord->endTime        = QTime::fromMSecsSinceStartOfDay(ALIGN_TO_SEC(query.value(3).toInt()));
-                pRecord->mediaSource    = query.value(4).toString();
-                pRecord->videoArchive   = query.value(5).toString();
-
-                results.append(pRecord);
-            }
-        }
-        else
-        {
-            ERROR_MESSAGE2(ERR_TYPE_DISPOSABLE,
-                           "AnalysisRecordSQLiteDao",
-                           "Failed to execute query: %s\nSQL Error: %s",
-                           query.lastQuery().toUtf8().constData(),
-                           query.lastError().text().toUtf8().constData());
-
-            return CAMERA_PIPELINE_ERROR;
-        }
-    }
-    else  // In record only mode we need to get archive files list directly from VideoArchive folder
-    {
-        QString archivePath(pDataDirectory->pipelineParams.archivePath);
-        QString pipelineName(pDataDirectory->pipelineParams.pipelineName);
-
-        QDir            directory(archivePath + QString('/') + pipelineName);
-        QFileInfoList   filesList;
-
-        filesList = directory.entryInfoList(QStringList("*.mp4"), QDir::NoFilter, QDir::Name);
-
-        if (filesList.size() > 0)
-        {
-            QDateTime startDateTime;
-            QDateTime endDateTime;
-
-            startDateTime.setDate(startDate);
-            startDateTime.setTime(startTime);
-
-            endDateTime.setDate(endDate);
-            endDateTime.setTime(endTime);
-
-            results.clear();
-
-            while(!filesList.isEmpty())
-            {
-                QFileInfo  fi = filesList.takeFirst();
-                QString    fileTimeStr = fi.fileName();
-                QDateTime  fileTime;
-
-                fileTimeStr.chop(4);    // remove file extension
-                fileTimeStr.remove(0, fileTimeStr.length() - 21); // we need only 'dd_MM_yyyy___HH_mm_ss' (21 character)
-                fileTime = QDateTime::fromString(fileTimeStr, "dd_MM_yyyy___HH_mm_ss");
-
-                if (fileTime >= startDateTime && fileTime <= endDateTime)
-                {
-                    AnalysisRecordModel* pRecord = new AnalysisRecordModel; // Memory must be deleted by user after usage
-
-                    pRecord->id             = 0;
-                    pRecord->date           = fi.created().date();
-                    pRecord->startTime      = fi.created().time();
-                    pRecord->endTime        = QTime();
-                    pRecord->mediaSource    = "";
-                    pRecord->videoArchive   = QString('/') + pipelineName + QString('/') + fi.fileName();
-
-                    results.append(pRecord);
-                }
-            }
-        }
-    }
-    return CAMERA_PIPELINE_OK;
-}
-
-QImage AnalysisRecordSQLiteDao::heatmap(int id)
-{
-    QImage result;
-    QSqlQuery   query;
-    QString sql = "SELECT heatmap FROM records WHERE id=" + QString::number(id);
-
-    query.setForwardOnly(true);
-    query.prepare(sql);
-
-    if (query.exec())
-    {
-        if (query.next())
-        {
-            result = QImage::fromData(QByteArray::fromBase64(query.value(0).toString().toUtf8()), "PNG");
-        }
-    }
-    else
-    {
-        ERROR_MESSAGE2(ERR_TYPE_DISPOSABLE,
-                       "AnalysisRecordSQLiteDao",
-                       "Failed to execute query: %s\nSQL Error: %s",
-                       query.lastQuery().toUtf8().constData(),
-                       query.lastError().text().toUtf8().constData());
-    }
-    return result;
-}
-
-QByteArray AnalysisRecordSQLiteDao::dataBlob(int id)
-{
-    QSqlQuery   query;
-    QString sql = "SELECT stats_data FROM records WHERE id=" + QString::number(id);
-    query.setForwardOnly(true);
-    query.prepare(sql);
-
-    if (query.exec())
-    {
-        if (query.next())
-        {
-            return QByteArray::fromBase64(query.value(0).toString().toUtf8());
-        }
-    }
-    else
-    {
-        ERROR_MESSAGE2(ERR_TYPE_DISPOSABLE,
-                       "AnalysisRecordSQLiteDao",
-                       "Failed to execute query: %s\nSQL Error: %s",
-                       query.lastQuery().toUtf8().constData(),
-                       query.lastError().text().toUtf8().constData());
-    }
-    return QByteArray();
-}
-
-void AnalysisRecordSQLiteDao::storeEvent(EventDescription event)
+void AnalysisRecordDao::storeEvent(EventDescription event)
 {
     QSqlQuery   query;
     QString     fileTimeStr;
@@ -495,60 +306,4 @@ void AnalysisRecordSQLiteDao::storeEvent(EventDescription event)
                        query.lastQuery().toUtf8().constData(),
                        query.lastError().text().toUtf8().constData());
     }
-}
-
-ErrorCode AnalysisRecordSQLiteDao::getEvents(QDateTime startDateTime, QDateTime endDateTime, QList<EventDescription> &results)
-{
-    Q_UNUSED(results);
-    QSqlQuery   query;
-
-    QString  camName = (DataDirectoryInstance::instance())->pipelineParams.pipelineName;
-    QString  startTime = QString::number(ALIGN_TO_SEC(startDateTime.toMSecsSinceEpoch()));
-    QString  endTime   = QString::number(ALIGN_TO_SEC(endDateTime.toMSecsSinceEpoch()));
-
-    if (!startDateTime.isValid() || !endDateTime.isValid())
-    {
-        ERROR_MESSAGE0(ERR_TYPE_DISPOSABLE, "AnalysisRecordSQLiteDao", "Invalid time parameters in getEvents()");
-        return CAMERA_PIPELINE_ERROR;
-    }
-
-    QString sql = QString("SELECT id, start_timestamp,  end_timestamp, type, confidence, reaction, archive_file1, archive_file2, file_offset_sec "
-                          "FROM events WHERE"
-                          "(cam = '%1' AND end_timestamp >= %2 AND start_timestamp <= %3 )" ).arg(camName, startTime, endTime);
-
-    query.setForwardOnly(true);
-
-    query.prepare(sql);
-
-    if (query.exec())
-    {
-        results.clear();
-        while(query.next())
-        {
-            EventDescription event;
-
-            event.id                = query.value(0).toLongLong();
-            event.startTime         = QDateTime::fromMSecsSinceEpoch(query.value(1).toLongLong());
-            event.endTime           = QDateTime::fromMSecsSinceEpoch(query.value(2).toLongLong());
-            event.eventType         = query.value(3).toInt();
-            event.confidence        = query.value(4).toInt();
-            event.reaction          = (ReactionType)query.value(5).toInt();
-            event.archiveFileName1  = query.value(6).toString();
-            event.archiveFileName2  = query.value(7).toString();
-            event.offset            = query.value(8).toLongLong();
-
-            results.append(event);
-        }
-    }
-    else
-    {
-        ERROR_MESSAGE2(ERR_TYPE_DISPOSABLE,
-                       "AnalysisRecordSQLiteDao",
-                       "Failed to execute query: %s\nSQL Error: %s",
-                       query.lastQuery().toUtf8().constData(),
-                       query.lastError().text().toUtf8().constData());
-
-        return CAMERA_PIPELINE_ERROR;
-    }
-    return CAMERA_PIPELINE_OK;
 }

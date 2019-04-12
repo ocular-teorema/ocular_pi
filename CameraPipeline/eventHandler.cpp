@@ -96,7 +96,6 @@ void EventHandler::OpenEvent(EventDescription* event)
 
 void EventHandler::CloseEvent(EventDescription* event)
 {
-    //(AnalysisRecordSQLiteDao::Instance())->storeEvent(*event);    // Write event to the DB
     ERROR_MESSAGE5(ERR_TYPE_MESSAGE,
                    "EventHandler",
                    "Event closed { id = %d, type = %s, duration = %lld sec, confidence = %d, reaction = %s }",

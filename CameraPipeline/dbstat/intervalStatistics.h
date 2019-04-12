@@ -21,9 +21,11 @@ signals:
     void Ping(const char* name, int timeoutMs);                          /// Ping signal for health checker
 
 public slots:
+    void OpenDB();
     void PerformGetStatistic(QDateTime currentDateTime);
     void PerformWriteStatistic(IntervalStatistics* stats);
     void NewArchiveFileName(QString newFileName);
+    void StoreEvent(EventDescription event);
 
 private slots:
     // These functions need to avoid simultaneous DB access
@@ -33,6 +35,8 @@ private slots:
     void  DelayedWrite();
 
 private:
+    AnalysisRecordDao*          m_pDAO;
+
     QList<IntervalStatistics *> m_currentPeriodStatistic;   /// Current period statistic
     QString                     m_archiveFileName;          /// Actual archive file name from stream recorder
 

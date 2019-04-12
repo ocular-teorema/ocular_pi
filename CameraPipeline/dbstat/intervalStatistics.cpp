@@ -211,7 +211,7 @@ void VideoStatistics::ProcessAnalyzedFrame(VideoFrame *pCurrentFrame, AnalysisRe
     }
 }
 
-StatisticDBInterface::StatisticDBInterface() : QObject(NULL)
+StatisticDBInterface::StatisticDBInterface() : QObject(NULL), m_pDAO(NULL)
 {
     // Initialize random number generator with int value from pointer
     // should be different for different application instances
@@ -229,8 +229,15 @@ StatisticDBInterface::~StatisticDBInterface()
     }
     m_currentPeriodStatistic.clear();
 
-    (AnalysisRecordSQLiteDao::Instance())->Drop();
+    SAFE_DELETE(m_pDAO);
+
     DEBUG_MESSAGE0("StatisticDBInterface", "~StatisticDBInterface() finished");
+}
+
+void StatisticDBInterface::OpenDB()
+{
+    // Create new database access object
+    m_pDAO = new AnalysisRecordDao();
 }
 
 void StatisticDBInterface::NewArchiveFileName(QString newFileName)
@@ -239,9 +246,25 @@ void StatisticDBInterface::NewArchiveFileName(QString newFileName)
     m_archiveFileName = newFileName;
 }
 
+void StatisticDBInterface::StoreEvent(EventDescription event)
+{
+    if (NULL == m_pDAO)
+    {
+        ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "StoreEvent() failed: data access object is NULL");
+        return;
+    }
+    m_pDAO->storeEvent(event);
+}
+
 void StatisticDBInterface::PerformGetStatistic(QDateTime currentDateTime)
 {
     int delay = (rand() % 6) * 10;
+
+    if (NULL == m_pDAO)
+    {
+        ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "GetStatictic() failed: data access object is NULL");
+        return;
+    }
 
     // Store time to be processed in delayed slot
     m_statisticsToGetTime = currentDateTime;
@@ -264,7 +287,7 @@ void StatisticDBInterface::DelayedGet()
     processingTimer.restart();
     DEBUG_MESSAGE1("StatisticDBInterface", "DelayedGet() called ThreadID = %p", QThread::currentThreadId());
 
-    if(CAMERA_PIPELINE_OK != (AnalysisRecordSQLiteDao::Instance())->FindStatsForPeriod(
+    if(CAMERA_PIPELINE_OK != m_pDAO->FindStatsForPeriod(
                 m_statisticsToGetTime, periodDays, intervalSeconds, recordsList))
     {
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Failed to get statistics for given period");
@@ -321,6 +344,12 @@ void StatisticDBInterface::PerformWriteStatistic(IntervalStatistics* stats)
 {
     int delay = (rand() & 7) * 20 + 60;
 
+    if (NULL == m_pDAO)
+    {
+        ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "WriteStatistic() failed: data access object is NULL");
+        return;
+    }
+
     // Store current archive name (because it will be changed whe DelayedWrite() will be called)
     stats->archiveFile = m_archiveFileName;
 
@@ -359,7 +388,7 @@ void StatisticDBInterface::DelayedWrite()
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Unable to convert collected statistics to BLOB");
     }
 
-    (AnalysisRecordSQLiteDao::Instance())->InsertRecord(newRecord);
+    m_pDAO->InsertRecord(newRecord);
 
     // Send ping to health checker that write statistics is working
     emit Ping("WriteStatistic", 30*60*1000); // Timeout = 30 min

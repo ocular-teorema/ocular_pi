@@ -86,6 +86,7 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     pStatisticDBIntf = new StatisticDBInterface();
     qRegisterMetaType< QList<IntervalStatistics* > >("QList<IntervalStatistics* >");
     pStatisticDBIntf->moveToThread(pStatisticThread);
+    QObject::connect(pStatisticThread, SIGNAL(started()),  pStatisticDBIntf, SLOT(OpenDB()));
     QObject::connect(pStatisticThread, SIGNAL(finished()), pStatisticDBIntf, SLOT(deleteLater()));
     QObject::connect(pStatisticThread, SIGNAL(finished()), pStatisticThread, SLOT(deleteLater()));
 
@@ -221,6 +222,10 @@ void CameraPipeline::ConnectSignals()
         // Inform DecisionMaker, that new period statistics received from DB
         QObject::connect(pStatisticDBIntf, SIGNAL(NewPeriodStatistics(QList<IntervalStatistics*>)),
                          pEventHandler, SLOT(ProcessIntervalStats(QList<IntervalStatistics*>)));
+
+        // Store all events in database
+        QObject::connect(pEventHandler,  SIGNAL(EventFinished(EventDescription)),
+                         pStatisticDBIntf, SLOT(StoreEvent(EventDescription)));
 
         // Interaction between Event handler and frontend (via DataDirectory)
         qRegisterMetaType<EventDescription>("EventDescription");
