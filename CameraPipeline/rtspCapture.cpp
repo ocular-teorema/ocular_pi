@@ -53,10 +53,12 @@ int RTSPCapture::ProbeStreamParameters(const char *url, double *fps, int *w, int
     int res;
     int idx;
     double detectedFps;
-
+    AVDictionary* opts = NULL;
     AVFormatContext* pFmtCtx = NULL;
 
-    res = avformat_open_input(&pFmtCtx, url, NULL, NULL);
+    av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+    res = avformat_open_input(&pFmtCtx, url, NULL, &opts);
+    av_dict_free(&opts);
     if (res < 0)
     {
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture::Probe", "Failed to open stream");
