@@ -9,7 +9,7 @@ DataDirectory::DataDirectory(QSettings& settings) :
     QObject(NULL),
     mTcpSocket(NULL)
 {
-    int port = settings.value("General/port", 6781).toInt();
+    int port = settings.value("Port", 6781).toInt();
     analysisParams.readParameters(settings);
     pipelineParams.readParameters(settings);
     eventParams.readParameters(settings);
