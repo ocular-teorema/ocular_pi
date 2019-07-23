@@ -158,11 +158,17 @@ void StreamRecorder::StartFile(QString startTime)
             }
         }
 
-        if (0 > avformat_write_header(m_pFormatCtx, NULL))
+        // Moov atom for mp4 fast playback start.
+        AVDictionary* opts(0);
+        av_dict_set(&opts, "movflags", "faststart+empty_moov", 0);
+        av_dict_set(&opts, "moov_size", "262144", 0);
+
+        if (0 > avformat_write_header(m_pFormatCtx, &opts))
         {
             ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "avformat_write_header() failed");
             return;
         }
+        av_dict_free(&opts);
 
         // Inform all subscribers, that we started new archive file
         emit NewFileOpened(shortFileName);

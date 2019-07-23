@@ -301,7 +301,7 @@ void CameraPipeline::CriticalErrorHappened(QString msg)
 
 int CameraPipeline::CheckParams()
 {
-    DataDirectory*            pDataDirectory = DataDirectoryInstance::instance();
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
     if (pDataDirectory->pipelineParams.fps <= 0 || pDataDirectory->analysisParams.downscaleCoeff <= 0) {
 
