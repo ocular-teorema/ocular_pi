@@ -59,6 +59,7 @@ signals:
 
 public slots:
     void  ProcessAnalyzedFrame(VideoFrame* pCurrentFrame, AnalysisResults* results);
+    void  AddFalseEventDiffBuffer(VideoBuffer *buffer);
 
 private slots:
     void  IntervalStarted(QDateTime currentTime);

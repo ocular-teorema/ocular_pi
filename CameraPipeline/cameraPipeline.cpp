@@ -208,6 +208,10 @@ void CameraPipeline::ConnectSignals()
         QObject::connect(pVideoAnalyzer, SIGNAL(AnalysisFinished(VideoFrame*, AnalysisResults*)),
                          pVideoStatistics, SLOT(ProcessAnalyzedFrame(VideoFrame*, AnalysisResults*)));
 
+        // Update heatmap (for false alerts)
+        QObject::connect(pEventHandler, SIGNAL(EventDiffBufferUpdate(VideoBuffer*)),
+                         pVideoStatistics, SLOT(AddFalseEventDiffBuffer(VideoBuffer*)));
+
         // Interaction between IntervalStatistics and StatisticDBInterface
         QObject::connect(pVideoStatistics, SIGNAL(StatisticPeriodStarted(QDateTime)),
                          pStatisticDBIntf, SLOT(PerformGetStatistic(QDateTime)));

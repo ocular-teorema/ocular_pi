@@ -22,6 +22,8 @@ EventHandler::EventHandler() :
     QObject::connect(pAreaEventHandler, SIGNAL(EventFinished(EventDescription*)), this, SLOT(CloseEvent(EventDescription*)));
     QObject::connect(pMotionEventHandler, SIGNAL(EventFinished(EventDescription*)), this, SLOT(CloseEvent(EventDescription*)));
     QObject::connect(pCalibEventHandler, SIGNAL(EventFinished(EventDescription*)), this, SLOT(CloseEvent(EventDescription*)));
+
+    QObject::connect(pAreaEventHandler, SIGNAL(UpdateDiffBuffer(VideoBuffer*)), this, SLOT(DiffBufferUpdateSlot(VideoBuffer*)));
 }
 
 EventHandler::~EventHandler()
@@ -106,6 +108,11 @@ void EventHandler::CloseEvent(EventDescription* event)
                    EventReactionStr[event->reaction + 1]);
 
     emit EventFinished(*event);
+}
+
+void EventHandler::DiffBufferUpdateSlot(VideoBuffer *eventDiff)
+{
+    emit EventDiffBufferUpdate(eventDiff);
 }
 
 
@@ -226,7 +233,6 @@ void SingleEventHandlerBase::ProcessResults(AnalysisResults* pResults)
         return; // Returns false, if no valid statistics present
     }
 
-
     // Wait for a while after false alerts
     if (m_skipFrames > 0)
     {
@@ -277,4 +283,92 @@ void SingleEventHandlerBase::ProcessResults(AnalysisResults* pResults)
 void SingleEventHandlerBase::SecurityReaction(EventDescription event)
 {
     m_reaction = event.reaction;
+}
+
+void AreaEventHandler::ProcessResults(AnalysisResults *pResults)
+{
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
+
+    QDateTime   currentDateTime  = QDateTime::fromMSecsSinceEpoch(pResults->timestamp);
+
+    int         minEventDuration = pDataDirectory->eventParams.minimalEventDuration;
+    int         maxEventDuration = pDataDirectory->eventParams.maximalEventDuration;
+    int         idleEventDuration = pDataDirectory->eventParams.idleEventDuration;
+
+    DEBUG_MESSAGE0("SingleEventHandlerBase", "ProcessResults() called");
+
+    if (!currentDateTime.isValid())
+    {
+        ERROR_MESSAGE0(ERR_TYPE_ERROR, "SingleEventHandlerBase", "Invalid frame timestamp");
+        return;
+    }
+
+    // Make alert/no alert decision first
+    if (!m_pDecisionMaker->ProcessAnalysisResults(pResults))
+    {
+        return; // Returns false, if no valid statistics present
+    }
+
+    // Wait for a while after false alerts
+    if (m_skipFrames > 0)
+    {
+        DEBUG_MESSAGE1("SingleEventHandlerBase", "Waiting for %d frames after false alert", m_skipFrames);
+        m_skipFrames--;
+        return;
+    }
+
+    // Accumulate event difference buffer only for active events
+    if (m_isEventActive)
+    {
+        m_eventDiffBuffer.SetSize(pResults->pDiffBuffer->GetWidth(),
+                                  pResults->pDiffBuffer->GetHeight());
+        m_eventDiffBuffer.Add(pResults->pDiffBuffer);
+    }
+
+    // Process frame decision
+    if (m_pDecisionMaker->decision.alertType > 0)   // If current frame has alert indication
+    {
+        m_lastAlertReceived = currentDateTime;
+        m_firstAlertReceived = (m_firstAlertReceived.isValid()) ? m_firstAlertReceived : currentDateTime;
+
+        // Average current event confidence value
+        CalculateConfidence(m_pDecisionMaker->decision.confidence);
+
+        // Check for minimum event duration and start new event if OK
+        if (m_firstAlertReceived.msecsTo(currentDateTime) > minEventDuration)
+        {
+            OpenEvent(m_firstAlertReceived);
+            m_isEventActive = true;
+            m_eventDiffBuffer.Zero();
+        }
+    }
+    else  // If current frame has no alert indication
+    {
+        if (m_lastAlertReceived.isValid() && m_lastAlertReceived.msecsTo(currentDateTime) > idleEventDuration)
+        {
+            CloseEvent(m_lastAlertReceived);
+
+            m_isEventActive = false;
+            m_firstAlertReceived = QDateTime(); // Reset first alert time for next alert sequence
+            m_lastAlertReceived = QDateTime();  // Reset last alert time for next alert sequence
+        }
+    }
+
+    // Check for maximum event duration and stop event if needed
+    if (m_eventStartTime.isValid() && (m_eventStartTime.msecsTo(currentDateTime) > maxEventDuration))
+    {
+        CloseEvent(currentDateTime);
+        m_isEventActive = false;
+    }
+
+    // Process security offices reactions (if any)
+    if ((m_reaction == REACTION_ALERT) || (m_reaction == REACTION_FALSE))
+    {
+        m_isEventActive = false;
+        if (m_reaction == REACTION_FALSE)
+        {
+            emit UpdateDiffBuffer(&m_eventDiffBuffer);
+        }
+        CloseEvent(currentDateTime);
+    }
 }

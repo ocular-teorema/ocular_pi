@@ -41,10 +41,6 @@ public:
 
 private:
     AccumlatorBuffer            m_totalAccBuffer;     /// Buffer to accumulate weighted difference for several intervals
-    VideoBuffer                 m_diffPointsBuffer;   /// Buffer for storing alert points position
-
-    // Debug drawing buffers
-    VideoBuffer                 m_heatmapBuffer;      /// Buffer for drawing accumulated heatmap
 
     /// Statistic processing function
     void  ProcessStatistics(QList<IntervalStatistics*> statsList, float* weights);

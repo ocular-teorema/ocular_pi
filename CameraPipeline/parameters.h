@@ -8,6 +8,7 @@ struct AnalysisParameters
     double  downscaleCoeff;
     double  motionThreshold;
     double  totalThreshold;
+    double  falseEventCoeff;
     int     diffThreshold;
     int     validMotionBinHeight;
     bool    differenceBasedAnalysis;

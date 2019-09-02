@@ -211,6 +211,23 @@ void VideoStatistics::ProcessAnalyzedFrame(VideoFrame *pCurrentFrame, AnalysisRe
     }
 }
 
+void VideoStatistics::AddFalseEventDiffBuffer(VideoBuffer *buffer)
+{
+    DataDirectory*  pDataDirectory = DataDirectoryInstance::instance();
+    DEBUG_MESSAGE0("VideoStatistics", "AddFalseEventDiffBuffer() called");
+
+    if (pDataDirectory->analysisParams.differenceBasedAnalysis)
+    {
+        //--- Accumulating interval statistics ---
+        if ((m_currentStats.accBuffer.GetWidth() == buffer->GetWidth()) &&
+            (m_currentStats.accBuffer.GetHeight() == buffer->GetHeight()))
+        {
+            m_currentStats.accBuffer.AddBuffer(buffer, pDataDirectory->analysisParams.falseEventCoeff);
+        }
+    }
+    DEBUG_MESSAGE0("VideoStatistics", "AddFalseEventDiffBuffer() finished");
+}
+
 StatisticDBInterface::StatisticDBInterface() : QObject(NULL), m_pDAO(NULL)
 {
     // Initialize random number generator with int value from pointer

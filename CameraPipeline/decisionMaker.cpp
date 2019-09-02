@@ -224,40 +224,27 @@ void AreaDecisionMaker::ProcessStatistics(QList<IntervalStatistics *> statsList,
             m_totalAccBuffer.Add(&pIntervalStats->accBuffer, weights[i]);
         }
     }
-    // Output accumulated heatmap to Debug
-    //if (pDataDirectory->getParams().produceDebug())
-    //{
-    //    m_heatmapBuffer.SetSize(m_totalAccBuffer.GetWidth(), m_totalAccBuffer.GetHeight());
-    //    m_totalAccBuffer.ConvertTo(&m_heatmapBuffer);
-    //    pDataDirectory->newImage("AccumulatedHeatmap", QSharedPointer<QImage>(m_heatmapBuffer.GetQImagePtr(2.0f)));
-    //}
 }
 
 void AreaDecisionMaker::ProcessResults(AnalysisResults* pResults)
 {
     int   i;
     int   j;
-    int   k;
 
     DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
     float           diffCount = 0.0f;
     float           confidence = 0.0f;
-    int             accStride = m_totalAccBuffer.GetStride();
-    int             diffStride = pResults->pDiffBuffer->GetStride();
-    int             tmpStride;
     int             width = m_totalAccBuffer.GetWidth();
     int             height = m_totalAccBuffer.GetHeight();
-    unsigned char*  pTmpDiff;
+    int             accStride = m_totalAccBuffer.GetStride();
+    int             diffStride = pResults->pDiffBuffer->GetStride();
     unsigned char*  pDiff = pResults->pDiffBuffer->GetPlaneData();
     float*          pAcc = m_totalAccBuffer.GetPlaneData();
 
     int   diffThr = pDataDirectory->analysisParams.diffThreshold;
 
     DEBUG_MESSAGE0("AreaDecisionMaker", "ProcessResults()");
-
-    m_diffPointsBuffer.SetSize(width, height);
-    m_diffPointsBuffer.SetVal(0);
 
     if (!pDataDirectory->analysisParams.differenceBasedAnalysis)
     {
@@ -282,9 +269,6 @@ void AreaDecisionMaker::ProcessResults(AnalysisResults* pResults)
         return;
     }
 
-    pTmpDiff = m_diffPointsBuffer.GetPlaneData();
-    tmpStride = m_diffPointsBuffer.GetStride();
-
     for (j = 0; j < height; j++)
     {
         for (i = 0; i < width; i++)
@@ -293,16 +277,11 @@ void AreaDecisionMaker::ProcessResults(AnalysisResults* pResults)
             // that not present in total accumulated differene for interval
             if ((pDiff[j*diffStride + i] > 0) && (pAcc[j*accStride + i] < diffThr))
             {
-                float c = 100.0f * (float)(diffThr - pAcc[j*accStride + i]) / (float)(diffThr);
-                pTmpDiff[j*tmpStride + i] = (int)c;
-                confidence += c;
+                confidence += 100.0f * (float)(diffThr - pAcc[j*accStride + i]) / (float)(diffThr);
                 diffCount = diffCount + 1.0f;
             }
         }
     }
-
-    // Send pointer to difference buffer
-    decision.pInfoBuffer = &m_diffPointsBuffer;
 
     // Get average confidence value
     decision.confidence = confidence / diffCount;
@@ -313,27 +292,6 @@ void AreaDecisionMaker::ProcessResults(AnalysisResults* pResults)
     if (diffCount > pDataDirectory->analysisParams.totalThreshold)
     {
         decision.alertType = ALERT_TYPE_AREA;
-
-        // Find object(s), that produced this motion
-        for (k = 0; k < decision.objects.size(); k++)
-        {
-            float           numDiffPoints = 0.0f;
-            DetectedObject  object = pResults->objects[k];
-
-            // Scan all points inside object area
-            for(j = 0; j < object.sizeY; j++)
-            {
-                for(i = 0; i < object.sizeX; i++)
-                {
-                    // Check if this is detected point inside object area
-                    if (pTmpDiff[(j + object.coordY)*tmpStride + (i + object.coordX)] > 0)
-                    {
-                        numDiffPoints += 1.0f;
-                    }
-                }
-            }
-            decision.objects[k].isValid = (numDiffPoints / (float)(object.sizeX*object.sizeY)) < 0.2f;
-        }
     }
 }
 

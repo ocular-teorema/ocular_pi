@@ -8,6 +8,7 @@ void AnalysisParameters::readParameters(QSettings& ini)
     differenceBasedAnalysis = ini.value("AnalysisParams/Difference based analysis", false).toBool();
     motionBasedAnalysis     = ini.value("AnalysisParams/Motion based analysis", false).toBool();
     totalThreshold          = ini.value("AnalysisParams/Total Threshold", 0.05).toDouble();
+    falseEventCoeff         = ini.value("AnalysisParams/False event coeff", 5.00).toDouble();
     validMotionBinHeight    = ini.value("AnalysisParams/Valid motion bin height", 8).toInt();
     experimental            = ini.value("AnalysisParams/Experimental", false).toBool();
     minimumCluster          = ini.value("AnalysisParams/Minimum Cluster", 50).toInt();

@@ -192,7 +192,7 @@ public:
     void SetSize(int width, int height);
 
     void Add(AccumlatorBuffer* pInBuffer, float weight = 1.0f);
-    void AddBuffer(VideoBuffer* pInBuffer);
+    void AddBuffer(VideoBuffer* pInBuffer, float weight = 1.0f);
 
     void Blur(int radius = 3);
 

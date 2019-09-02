@@ -746,7 +746,7 @@ void AccumlatorBuffer::Add(AccumlatorBuffer *pInBuffer, float weight)
     m_count++;
 }
 
-void AccumlatorBuffer::AddBuffer(VideoBuffer* pInBuffer)
+void AccumlatorBuffer::AddBuffer(VideoBuffer* pInBuffer, float weight)
 {
     unsigned char*  pBuf = pInBuffer->GetPlaneData();
     int             width = pInBuffer->GetWidth();
@@ -768,7 +768,7 @@ void AccumlatorBuffer::AddBuffer(VideoBuffer* pInBuffer)
     {
         for(int i = 0; i < width; i++)
         {
-            m_pBuffer[j*m_stride + i] += (float)pBuf[j*stride + i];
+            m_pBuffer[j*m_stride + i] += (float)pBuf[j*stride + i] * weight;
         }
     }
     m_count++;
