@@ -31,35 +31,36 @@ void VideoAnalyzer::StartAnalyze()
 
     DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
-    m_frameInterval = 1000.0/(double)pDataDirectory->pipelineParams.fps;
-
-    // Frame capturing performed on capture timers' timeout event
-    // This made to prevent event loop blocking with while(1)
-    // This timer should be created here, because InitCapture function
-    // Is called after RTSPCapture object moved to it's separate thread
-    m_pProcessingTimer = new QTimer;
-    m_pProcessingTimer->setTimerType(Qt::PreciseTimer);
-    m_pProcessingTimer->setInterval(m_frameInterval);
-    QObject::connect(m_pProcessingTimer, SIGNAL(timeout()), this, SLOT(DoAnalyze()));
-    ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "VideoAnalyzer", "ProcessingTimer is connected. Interval was set to %f ms", m_frameInterval);
-
-    m_nextFrameTime = 0.0;
-
-    if (NULL == m_pProcessingTimer)
+    // Get fixed step to keep analysis fps as low as possible and save resources
+    m_frameStep = 1;
+    m_frameNumber = 0;
+    while (((double)pDataDirectory->pipelineParams.fps / (double)(m_frameStep + 1)) > 6.99)
     {
-        ERROR_MESSAGE0(ERR_TYPE_CRITICAL, "VideoAnalyzer", "Cannot create processing timer");
-        return;
+        m_frameStep++;
     }
+    ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Every %d frame will be analyzed", m_frameStep);
 
-    if (pDataDirectory->analysisParams.differenceBasedAnalysis ||
-        pDataDirectory->analysisParams.motionBasedAnalysis)
-    {
-        m_pProcessingTimer->start();
-    }
-    else
-    {
-        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Record only mode activated. Analysis process timer switched off.");
-    }
+//    m_pProcessingTimer = new QTimer;
+//    m_pProcessingTimer->setTimerType(Qt::PreciseTimer);
+//    m_pProcessingTimer->setInterval(m_frameInterval);
+//    QObject::connect(m_pProcessingTimer, SIGNAL(timeout()), this, SLOT(DoAnalyze()));
+//    ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "VideoAnalyzer", "ProcessingTimer is connected. Interval was set to %f ms", m_frameInterval);
+
+//    if (NULL == m_pProcessingTimer)
+//    {
+//        ERROR_MESSAGE0(ERR_TYPE_CRITICAL, "VideoAnalyzer", "Cannot create processing timer");
+//        return;
+//    }
+
+//    if (pDataDirectory->analysisParams.differenceBasedAnalysis ||
+//        pDataDirectory->analysisParams.motionBasedAnalysis)
+//    {
+//        m_pProcessingTimer->start();
+//    }
+//    else
+//    {
+//        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Record only mode sercted. Analysis processing timer switched off.");
+//    }
 }
 
 void VideoAnalyzer::StopAnalyze()
@@ -85,15 +86,13 @@ void VideoAnalyzer::DoAnalyze()
     }
 
     // Try to get new frame
-    m_pInputFrameBuffer->GetFrame(&pCurrFrame, m_nextFrameTime);
-
-    // Increase next frame time
-    m_nextFrameTime += m_frameInterval * 0.001; // in seconds
+    m_pInputFrameBuffer->GetFrame(&pCurrFrame);
 
     // Send ping that analysis is alive and keeps reading frames
     emit Ping("VideoAnalyzer", HANG_TIMEOUT_MSEC);
 
-    if (pCurrFrame != NULL) // If we got new frame for analysis
+    // Analyze every n-th frame
+    if (pCurrFrame != NULL && ((++m_frameNumber % m_frameStep) == 0))
     {
         // Zero current results
         currentResults.timestamp = pCurrFrame->userTimestamp;

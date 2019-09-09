@@ -49,6 +49,7 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     // Analyzer object
     pVideoAnalyzer = new VideoAnalyzer(pFrameBuffer);
     pVideoAnalyzer->moveToThread(pProcessingThread);
+    QObject::connect(pProcessingThread, SIGNAL(started()), pVideoAnalyzer, SLOT(StartAnalyze()));
     QObject::connect(pProcessingThread, SIGNAL(finished()), pVideoAnalyzer, SLOT(deleteLater()));
 
     // Interval statistic handler object
@@ -195,7 +196,7 @@ void CameraPipeline::ConnectSignals()
         pDataDirectory->analysisParams.motionBasedAnalysis)
     {
         // Interaction between FrameBuffer and Analyzer module
-        QObject::connect(pFrameBuffer, SIGNAL(FirstFrameAdded()), pVideoAnalyzer, SLOT(StartAnalyze()));
+        QObject::connect(pFrameBuffer, SIGNAL(FrameAdded()), pVideoAnalyzer, SLOT(DoAnalyze()));
 
         // Inform EventHandler and VideoStatistics that new archive file is started
         QObject::connect(pStreamRecorder, SIGNAL(NewFileOpened(QString)),

@@ -19,9 +19,8 @@ FrameCircularBuffer::~FrameCircularBuffer()
     DEBUG_MESSAGE0("FrameCircularBuffer", "~FrameCircularBuffer() finished");
 }
 
-void FrameCircularBuffer::GetFrame(VideoFrame** pCurrentFrame, double time)
+void FrameCircularBuffer::GetFrame(VideoFrame** pCurrentFrame)
 {
-    Q_UNUSED(time);
     int64_t         currentMsec = QDateTime::currentDateTime().toMSecsSinceEpoch();
     DataDirectory*  pDataDirectory = DataDirectoryInstance::instance();
 
@@ -103,8 +102,9 @@ void FrameCircularBuffer::AddFrame(AVFrame* pNewFrame, double time)
     if (m_firstFrameTime < 0.0)
     {
         m_firstFrameTime = m_pFrameBuffer[m_writeIndex].nativeTimeInSeconds;
-        emit FirstFrameAdded();
     }
+
+    emit FrameAdded();
 
     // Check, if buffer was overflowed
     if (m_totalWritten - m_totalRead >= m_size)

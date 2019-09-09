@@ -35,10 +35,10 @@ public slots:
 
 private:
     FrameCircularBuffer*    m_pInputFrameBuffer;    /// Pointer to buffer with input frames. Must be set from outside!
-    QTimer*                 m_pProcessingTimer;     /// Frame processing timer
 
-    double                  m_frameInterval;        /// Target distance between frames
-    double                  m_nextFrameTime;        /// Relative time in seconds of next frame
+    QTimer*                 m_pProcessingTimer;     /// Frame processing timer
+    uint64_t                m_frameNumber;
+    int                     m_frameStep;
 
     VideoFrame              m_scaledPrevFrame;      /// Buffer for downscaled previous frame
     VideoBuffer             m_diffBuffer;           /// Buffer for difference calculation (downscaled, luma only)

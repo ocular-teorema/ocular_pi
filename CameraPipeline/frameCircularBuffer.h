@@ -17,11 +17,11 @@ public:
     FrameCircularBuffer(int size);
     ~FrameCircularBuffer();
 
-    void    GetFrame(VideoFrame** pFrame, double time = 0.0);
+    void    GetFrame(VideoFrame** pFrame);
     void    AddFrame(AVFrame* pNewFrame, double time);
 
 signals:
-    void    FirstFrameAdded();
+    void    FrameAdded();
 
 private:
     unsigned int m_size;            /// Buffer size
