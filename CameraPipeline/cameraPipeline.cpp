@@ -337,6 +337,8 @@ int CameraPipeline::CheckParams()
             coeff = (w > 720)  ? 0.3  : coeff;
             coeff = (w > 1200) ? 0.25 : coeff;
             coeff = (w > 1900) ? 0.15 : coeff;
+            coeff = (w > 2000) ? 0.09 : coeff;
+            coeff = (w > 2500) ? 0.05 : coeff;
             pDataDirectory->analysisParams.downscaleCoeff = coeff;
         }
 
