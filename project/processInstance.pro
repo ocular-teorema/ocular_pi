@@ -73,4 +73,4 @@ QMAKE_CXXFLAGS += -std=gnu++11
 # LIBS
 LIBS +=  -L/usr/lib
 LIBS +=  -lavformat -lavcodec -lavutil -lswresample -lswscale -lxcb-xfixes -lxcb-render -lxcb-shape -lxcb -lX11 -lx264 -lm -lz
-LIBS +=  -lopencv_imgproc -lopencv_highgui -lopencv_objdetect -lopencv_core -lopencv_features2d -lopencv_video
+LIBS +=  -lopencv_imgcodecs -lopencv_imgproc -lopencv_highgui -lopencv_objdetect -lopencv_core -lopencv_features2d -lopencv_video

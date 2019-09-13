@@ -7,6 +7,7 @@
 #include "cameraPipelineCommon.h"
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 VideoFrame::VideoFrame()
@@ -330,6 +331,20 @@ void VideoBuffer::CopyFrom(VideoFrame* pSrcFrame, int planeIdx)
     }
     nativeTimeInSeconds = pSrcFrame->nativeTimeInSeconds;
     userTimestamp = pSrcFrame->userTimestamp;
+}
+
+ErrorCode VideoBuffer::LoadFromFile(QString filePath)
+{
+    cv::Mat img = cv::imread(filePath.toUtf8().constData(), cv::IMREAD_GRAYSCALE);
+
+    if (!img.empty())
+    {
+        SetSize(img.cols, img.rows);
+        for (int j = 0; j < img.rows; j++)
+            memcpy(m_pBuffer + j * m_stride, img.data + j * img.step, m_width);
+        return CAMERA_PIPELINE_OK;
+    }
+    return CAMERA_PIPELINE_ERROR;
 }
 
 void VideoBuffer::CopyFrom(VideoBuffer *pSrc)

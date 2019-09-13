@@ -352,14 +352,17 @@ void CameraPipeline::CheckRequiredFolders()
 
     QString archiveFolder;
     QString imagesFolder;
+    QString debugInfoFolder;
 
     archiveFolder = pDataDirectory->pipelineParams.archivePath;
     archiveFolder += '/';
     archiveFolder += pDataDirectory->pipelineParams.pipelineName;
     imagesFolder = archiveFolder + QString("/alertFragments");
+    debugInfoFolder = archiveFolder + QString("/debugImages");
 
     QDir archiveDir(archiveFolder);
     QDir imagesDir(imagesFolder);
+    QDir debugDir(debugInfoFolder);
 
     if (!archiveDir.exists())
     {
@@ -369,6 +372,11 @@ void CameraPipeline::CheckRequiredFolders()
     if (!imagesDir.exists())
     {
         imagesDir.mkpath(".");
+    }
+
+    if (!debugDir.exists() && pDataDirectory->analysisParams.produceDebug)
+    {
+        debugDir.mkpath(".");
     }
 }
 

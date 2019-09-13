@@ -151,16 +151,6 @@ void DecisionMakerBase::GetIntervalWeights(QList<IntervalStatistics *> statsList
     // Normalize intervals weights
     for (i = 0; i < statsList.size(); i++)
     {
-        //// Debug output
-        //{
-        //    IntervalStatistics* pIntervalStats = statsList.at(i);
-        //    FILE * f = fopen("Weights.txt", "a");
-        //    fprintf(f, "Date = %s, Time = %s, weight = %f (%f)\n",
-        //            pIntervalStats->date.toString().toUtf8().constData(),
-        //            pIntervalStats->startTime.toString().toUtf8().constData(),
-        //            weights[i], weights[i] / totalWeight);
-        //    fclose(f);
-        //}
         weights[i] /= totalWeight;
     }
 }
@@ -222,6 +212,12 @@ void AreaDecisionMaker::ProcessStatistics(QList<IntervalStatistics *> statsList,
         {
             IntervalStatistics* pIntervalStats = statsList.at(i);
             m_totalAccBuffer.Add(&pIntervalStats->accBuffer, weights[i]);
+        }
+
+        // Draw collected heatmap for debug
+        if (pDataDirectory->analysisParams.produceDebug)
+        {
+            CreateDebugImages();
         }
     }
 }
@@ -295,10 +291,35 @@ void AreaDecisionMaker::ProcessResults(AnalysisResults* pResults)
     }
 }
 
+void AreaDecisionMaker::CreateDebugImages()
+{
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
+    QString debugFolder = pDataDirectory->pipelineParams.archivePath;
+            debugFolder += '/';
+            debugFolder += pDataDirectory->pipelineParams.pipelineName;
+            debugFolder += QString("/debugImages/");
 
+    QString thumbFile = (DataDirectoryInstance::instance())->pipelineParams.archivePath;
+    thumbFile += '/';
+    thumbFile += (DataDirectoryInstance::instance())->pipelineParams.pipelineName;
+    thumbFile += "/thumb.jpg";
 
+    // Read thumbnail image for background
+    VideoBuffer bkgr;
 
+    if (CAMERA_PIPELINE_OK == bkgr.LoadFromFile(thumbFile))
+    {
+        // Make file name corresponding to number of its 10-minute period
+        int64_t currentMsec = QDateTime::currentDateTime().time().msecsSinceStartOfDay();
+        int number = int(currentMsec / (1000 * pDataDirectory->pipelineParams.processingIntervalSec));
 
+        QString outputFile = QString("%1/heatmap_%2.png").arg(debugFolder).arg(number);
+
+        QImage res = StatisticDBInterface::CreateHeatmap(&bkgr, &m_totalAccBuffer);
+
+        res.save(outputFile);
+    }
+}
 
 ///
 /// Motion vectors violation check
@@ -331,6 +352,12 @@ void MotionDecisionMaker::ProcessStatistics(QList<IntervalStatistics *> statsLis
     {
         IntervalStatistics* pIntervalStats = statsList.at(i);
         m_motionMap.AddMap(&pIntervalStats->motionMap, weights[i]);
+    }
+
+    // Draw collected motion map for debug
+    if (pDataDirectory->analysisParams.produceDebug)
+    {
+        CreateDebugImages();
     }
 }
 
@@ -379,6 +406,49 @@ void MotionDecisionMaker::ProcessResults(AnalysisResults* pResults)
                 }
             }
         }
+    }
+}
+
+void MotionDecisionMaker::CreateDebugImages()
+{
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
+    QString debugFolder = pDataDirectory->pipelineParams.archivePath;
+            debugFolder += '/';
+            debugFolder += pDataDirectory->pipelineParams.pipelineName;
+            debugFolder += QString("/debugImages/");
+
+    QString thumbFile = (DataDirectoryInstance::instance())->pipelineParams.archivePath;
+    thumbFile += '/';
+    thumbFile += (DataDirectoryInstance::instance())->pipelineParams.pipelineName;
+    thumbFile += "/thumb.jpg";
+
+    // Read thumbnail image for background
+    VideoBuffer bkgr0;
+
+    if (CAMERA_PIPELINE_OK == bkgr0.LoadFromFile(thumbFile))
+    {
+        VideoBuffer bkgr1(&bkgr0);
+        VideoBuffer bkgr2(&bkgr0);
+
+        // Make file name corresponding to number of its 10-minute period
+        int64_t currentMsec = QDateTime::currentDateTime().time().msecsSinceStartOfDay();
+        int number = int(currentMsec / (1000 * pDataDirectory->pipelineParams.processingIntervalSec));
+
+        QString outputFile0 = QString("%1/motionMap0_%2.png").arg(debugFolder).arg(number);
+        QString outputFile1 = QString("%1/motionMap1_%2.png").arg(debugFolder).arg(number);
+        QString outputFile2 = QString("%1/motionMap2_%2.png").arg(debugFolder).arg(number);
+
+        m_motionMap.DrawMotionMap(&bkgr0, 0, pDataDirectory->analysisParams.downscaleCoeff);
+        m_motionMap.DrawMotionMap(&bkgr1, 1, pDataDirectory->analysisParams.downscaleCoeff);
+        m_motionMap.DrawMotionMap(&bkgr2, 2, pDataDirectory->analysisParams.downscaleCoeff);
+
+        QImage res0 = bkgr0.CreateQImage();
+        QImage res1 = bkgr1.CreateQImage();
+        QImage res2 = bkgr2.CreateQImage();
+
+        res0.save(outputFile0);
+        res1.save(outputFile1);
+        res2.save(outputFile2);
     }
 }
 

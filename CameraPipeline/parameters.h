@@ -14,6 +14,7 @@ struct AnalysisParameters
     bool    differenceBasedAnalysis;
     bool    motionBasedAnalysis;
     bool    experimental;
+    bool    produceDebug;
 
     int     minimumCluster;
     int     dilateSize;

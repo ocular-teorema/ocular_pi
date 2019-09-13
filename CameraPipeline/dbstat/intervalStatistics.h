@@ -16,6 +16,8 @@ public:
     StatisticDBInterface();
     ~StatisticDBInterface();
 
+    static QImage CreateHeatmap(VideoBuffer* pBkgrBuffer, AccumlatorBuffer* pAccBuffer);
+
 signals:
     void NewPeriodStatistics(QList<IntervalStatistics* > curStatsList);  /// Inform all about new statistics
     void Ping(const char* name, int timeoutMs);                          /// Ping signal for health checker
@@ -42,8 +44,6 @@ private:
 
     QDateTime                   m_statisticsToGetTime;
     IntervalStatistics*         m_statisticsToWritePtr;
-
-    QImage CreateHeatmap(VideoBuffer* pBkgrBuffer, AccumlatorBuffer* pAccBuffer);
 };
 
 class VideoStatistics : public QObject

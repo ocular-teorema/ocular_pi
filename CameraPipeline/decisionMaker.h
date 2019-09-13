@@ -3,6 +3,7 @@
 #include <QObject>
 
 #include "videoAnalyzer.h"
+#include "intervalStatistics.h"
 #include "pipelineCommonTypes.h"
 
 class DecisionMakerBase : public QObject
@@ -47,6 +48,9 @@ private:
 
     /// Main processing function
     void  ProcessResults(AnalysisResults* pResults);
+
+    /// Output debug images to hardcoded folder
+    void  CreateDebugImages();
 };
 
 
@@ -70,6 +74,9 @@ private:
 
     /// Main processing function
     void  ProcessResults(AnalysisResults* pResults);
+
+    /// Output debug images to hardcoded folder
+    void  CreateDebugImages();
 };
 
 

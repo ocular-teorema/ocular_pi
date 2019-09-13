@@ -141,6 +141,7 @@ public:
     int             GetStride() { return m_stride; }
     unsigned char*  GetPlaneData() { return m_pBuffer; }
 
+    ErrorCode LoadFromFile(QString filePath);
     QImage  CreateQImage(float scale = 1.0f);
     QImage* GetQImagePtr(float scale = 1.0f);
     void    WriteToYUVFile(const char* fileName);

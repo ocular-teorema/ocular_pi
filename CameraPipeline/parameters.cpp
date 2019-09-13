@@ -10,6 +10,7 @@ void AnalysisParameters::readParameters(QSettings& ini)
     totalThreshold          = ini.value("AnalysisParams/Total Threshold", 0.05).toDouble();
     falseEventCoeff         = ini.value("AnalysisParams/False event coeff", 5.00).toDouble();
     validMotionBinHeight    = ini.value("AnalysisParams/Valid motion bin height", 8).toInt();
+    produceDebug            = ini.value("AnalysisParams/Produce debug", false).toBool();
     experimental            = ini.value("AnalysisParams/Experimental", false).toBool();
     minimumCluster          = ini.value("AnalysisParams/Minimum Cluster", 50).toInt();
     dilateSize              = ini.value("AnalysisParams/Dilate Size", 10).toInt();
