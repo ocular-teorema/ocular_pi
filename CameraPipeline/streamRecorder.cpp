@@ -160,7 +160,7 @@ void StreamRecorder::StartFile(QString startTime)
 
         // Moov atom for mp4 fast playback start.
         AVDictionary* opts(0);
-        av_dict_set(&opts, "movflags", "frag_keyframe+empty_moov+omit_tfhd_offset", 0);
+        av_dict_set(&opts, "movflags", "faststart", 0);
 
         if (0 > avformat_write_header(m_pFormatCtx, &opts))
         {
