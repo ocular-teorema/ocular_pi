@@ -55,7 +55,7 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
     query.prepare("INSERT INTO records "
                   "(cam, date, start_time, end_time, media_source, video_archive, heatmap, stats_data, start_posix_time, end_posix_time) "
                   "VALUES "
-                  "(:cam, :date, :startTime, :endTime, :mediaSource, :videoArchive, :heatmap, :statsData, :startPosix, endPosix)");
+                  "(:cam, :date, :startTime, :endTime, :mediaSource, :videoArchive, :heatmap, :statsData, :startPosix, :endPosix)");
 
     heatmapBuffer.open(QIODevice::WriteOnly);
 
