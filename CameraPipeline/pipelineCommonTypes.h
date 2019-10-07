@@ -48,6 +48,7 @@ public:
     MotionMap               motionMap;
 
     QDate                   date;
+    QDate                   endDate;
     QTime                   startTime;
     QTime                   endTime;
     QString                 archiveFile;

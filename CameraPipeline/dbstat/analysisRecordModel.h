@@ -17,6 +17,7 @@ public:
 
     int             id;             // Record ID
     QDate           date;           // Date
+    QDate           endDate;        // end date
     QTime           startTime;      // Start time
     QTime           endTime;        // End time
     QString         mediaSource;    // Stream source adderss

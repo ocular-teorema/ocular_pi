@@ -53,9 +53,9 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
     QBuffer     heatmapBuffer(&heatmap);
 
     query.prepare("INSERT INTO records "
-                  "(cam, date, start_time, end_time, media_source, video_archive, heatmap, stats_data) "
+                  "(cam, date, start_time, end_time, media_source, video_archive, heatmap, stats_data, start_posix_time, end_posix_time) "
                   "VALUES "
-                  "(:cam, :date, :startTime, :endTime, :mediaSource, :videoArchive, :heatmap, :statsData)");
+                  "(:cam, :date, :startTime, :endTime, :mediaSource, :videoArchive, :heatmap, :statsData, :startPosix, endPosix)");
 
     heatmapBuffer.open(QIODevice::WriteOnly);
 
@@ -80,20 +80,24 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
     if (record.startTime.isValid())
     {
         query.bindValue(":startTime", record.startTime.msecsSinceStartOfDay());
+        query.bindValue(":startPosix", QDateTime(record.date, record.startTime).toTime_t());
     }
     else
     {
         query.bindValue(":startTime", "0");
+        query.bindValue(":startPosix", "0");
     }
 
     // End time
     if (record.endTime.isValid())
     {
         query.bindValue(":endTime", record.endTime.msecsSinceStartOfDay());
+        query.bindValue(":endPosix", QDateTime(record.endDate, record.endTime).toTime_t());
     }
     else
     {
         query.bindValue(":endTime", "0");
+        query.bindValue(":endPosix", "0");
     }
 
     // Media source
@@ -194,6 +198,7 @@ ErrorCode AnalysisRecordDao::FindStatsForPeriod(
 
             pRecord->id = query.value(0).toInt();                                               // id
             pRecord->date = QDate::fromJulianDay(query.value(2).toInt());                       // date
+            pRecord->endDate = pRecord->date; // We don't use this here
             pRecord->startTime = QTime::fromMSecsSinceStartOfDay(query.value(3).toInt());       // start_time
             pRecord->endTime = QTime::fromMSecsSinceStartOfDay(query.value(4).toInt());         // end_time
             pRecord->mediaSource = query.value(5).toString();                                   // media_source

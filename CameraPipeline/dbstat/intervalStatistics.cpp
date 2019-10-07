@@ -25,6 +25,7 @@ void IntervalStatistics::CopyFrom(IntervalStatistics& src)
     perFrameMovements = src.perFrameMovements;
     motionMap.CopyFrom(&src.motionMap);
     date = src.date;
+    endDate = src.endDate;
     startTime = src.startTime;
     endTime = src.endTime;
 }
@@ -153,6 +154,7 @@ void VideoStatistics::IntervalFinished(QDateTime currentDateTime)
     emit StatisticPeriodStarted(currentDateTime);   // Get new period statistics
 
     m_currentStats.date = currentRecordTime.date();
+    m_currentStats.endDate = currentDateTime.date();
     m_currentStats.startTime = currentRecordTime.time();
     m_currentStats.endTime = currentDateTime.time();
 
@@ -333,6 +335,7 @@ void StatisticDBInterface::DelayedGet()
         AnalysisRecordModel*  pRecord = recordsList.takeFirst();
 
         pNewIntervalStats->date          = pRecord->date;
+        pNewIntervalStats->endDate       = pRecord->endDate;
         pNewIntervalStats->startTime     = pRecord->startTime;
         pNewIntervalStats->endTime       = pRecord->endTime;
 
@@ -394,6 +397,7 @@ void StatisticDBInterface::DelayedWrite()
 
     newRecord.id            = 0; // will be autoincremented in DB
     newRecord.date          = stats->date;
+    newRecord.endDate       = stats->endDate;
     newRecord.startTime     = stats->startTime;
     newRecord.endTime       = stats->endTime;
     newRecord.mediaSource   = pDataDirectory->pipelineParams.inputStreamUrl;
