@@ -159,7 +159,10 @@ void VideoStatistics::IntervalFinished(QDateTime currentDateTime)
     m_currentStats.endTime = currentDateTime.time();
 
     // Set motion map internal buffers size
-    m_currentStats.backgroundBuffer.CopyFrom(m_pCurrentFrame, 0);
+    if (NULL != m_pCurrentFrame)
+    {
+        m_currentStats.backgroundBuffer.CopyFrom(m_pCurrentFrame, 0);
+    }
 
     m_currentStatsCopy.CopyFrom(m_currentStats);
 
@@ -211,6 +214,12 @@ void VideoStatistics::ProcessAnalyzedFrame(VideoFrame *pCurrentFrame, AnalysisRe
     {
         DEBUG_MESSAGE0("VideoStatistics", "Do not processing statistics when analysis is not enabled");
     }
+}
+
+// This function is a stub for adding records to DB when record-only mode is active
+void VideoStatistics::ProcessSourcePacket(QSharedPointer<AVPacket> pInPacket)
+{
+    m_pIntervalTimer->Tick(pInPacket->pos);
 }
 
 void VideoStatistics::AddFalseEventDiffBuffer(VideoBuffer *buffer)
@@ -466,50 +475,54 @@ QImage StatisticDBInterface::CreateHeatmap(VideoBuffer* pBkgrBuffer, AccumlatorB
     int     accHeight = pAccBuffer->GetHeight() - 1;
     int     accStride = pAccBuffer->GetStride();
 
-    float   scale = (float)accWidth / (float)width;
-
-    float*         pAcc = pAccBuffer->GetPlaneData();
-    unsigned char* pBkg = pBkgrBuffer->GetPlaneData();
-
-    TColor  c;
-    double  val1;
-    double  val2;
-
-    QImage  res(width, height, QImage::Format_RGB888);
-
-    for (int j = 0; j < height; j++)
+    if (width > 0 && height > 0 && accWidth > 0 && accHeight > 0)
     {
-        for (int i = 0; i < width; i++)
+        float   scale = (float)accWidth / (float)width;
+
+        float*         pAcc = pAccBuffer->GetPlaneData();
+        unsigned char* pBkg = pBkgrBuffer->GetPlaneData();
+
+        TColor  c;
+        double  val1;
+        double  val2;
+
+        QImage  res(width, height, QImage::Format_RGB888);
+
+        for (int j = 0; j < height; j++)
         {
-            val1 = pAcc[std::min(accHeight, (int)(j*scale))*accStride + std::min(accWidth, (int)(i*scale))];
-            val2 = pBkg[j*stride + i];
-
-            val1  = std::min(val1, 255.0) / 255.0;
-            val2 /= 255.0;
-
-            if (val1 > 0.06)  // ~16 in absoulute value
+            for (int i = 0; i < width; i++)
             {
-                c = GetColour(val1, 0.0, 1.0); // Get coloured heatmap
+                val1 = pAcc[std::min(accHeight, (int)(j*scale))*accStride + std::min(accWidth, (int)(i*scale))];
+                val2 = pBkg[j*stride + i];
 
-                // Blend with background
-                c.r = 0.7*c.r + 0.3*val2;
-                c.g = 0.7*c.g + 0.3*val2;
-                c.b = 0.7*c.b + 0.3*val2;
+                val1  = std::min(val1, 255.0) / 255.0;
+                val2 /= 255.0;
+
+                if (val1 > 0.06)  // ~16 in absoulute value
+                {
+                    c = GetColour(val1, 0.0, 1.0); // Get coloured heatmap
+
+                    // Blend with background
+                    c.r = 0.7*c.r + 0.3*val2;
+                    c.g = 0.7*c.g + 0.3*val2;
+                    c.b = 0.7*c.b + 0.3*val2;
+                }
+                else
+                {
+                    c.r = val2;
+                    c.g = val2;
+                    c.b = val2;
+                }
+                // Set result pixel
+
+                int r = c.r * 255.0;
+                int g = c.g * 255.0;
+                int b = c.b * 255.0;
+
+                res.setPixel(i, j, qRgb(r, g, b));
             }
-            else
-            {
-                c.r = val2;
-                c.g = val2;
-                c.b = val2;
-            }
-            // Set result pixel
-
-            int r = c.r * 255.0;
-            int g = c.g * 255.0;
-            int b = c.b * 255.0;
-
-            res.setPixel(i, j, qRgb(r, g, b));
         }
+        return res;
     }
-    return res;
+    return QImage(16, 16, QImage::Format_RGB888);
 }

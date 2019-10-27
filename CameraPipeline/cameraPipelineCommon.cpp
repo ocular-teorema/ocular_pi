@@ -791,9 +791,12 @@ void AccumlatorBuffer::AddBuffer(VideoBuffer* pInBuffer, float weight)
 
 void AccumlatorBuffer::Blur(int radius)
 {
-    // Blur should be performed only on even region (to avoid falitures inside opencv)
-    cv::Mat  cur((m_height & 0xfffffffe), (m_width & 0xfffffffe), CV_32FC1, m_pBuffer, m_stride*sizeof(float));
-    cv::blur(cur, cur, cv::Size(radius, radius));
+    if (m_width > 0 && m_height > 0)
+    {
+        // Blur should be performed only on even region (to avoid falitures inside opencv)
+        cv::Mat  cur((m_height & 0xfffffffe), (m_width & 0xfffffffe), CV_32FC1, m_pBuffer, m_stride*sizeof(float));
+        cv::blur(cur, cur, cv::Size(radius, radius));
+    }
 }
 
 void AccumlatorBuffer::ConvertTo(VideoBuffer *dst, bool doAverage)
@@ -924,9 +927,18 @@ void FillSPSPPS(AVCodecParameters* pCodecContext, AVPacket* pPacket)
         return;
     }
 
-    pCodecContext->extradata = (unsigned char *)malloc(spsPpsDatalength);
-    pCodecContext->extradata_size = spsPpsDatalength;
-    memcpy(pCodecContext->extradata, &pCodedFrame[spsPpsStart], spsPpsDatalength);
+    if (pCodecContext->extradata_size != spsPpsDatalength)
+    {
+        if (NULL != pCodecContext->extradata)
+        {
+            free(pCodecContext->extradata);
+        }
+
+        pCodecContext->extradata = (unsigned char *)malloc(spsPpsDatalength);
+        pCodecContext->extradata_size = spsPpsDatalength;
+        memcpy(pCodecContext->extradata, &pCodedFrame[spsPpsStart], spsPpsDatalength);
+    }
+
 }
 
 IntervalTimer::IntervalTimer(int intervalLengthSec) :

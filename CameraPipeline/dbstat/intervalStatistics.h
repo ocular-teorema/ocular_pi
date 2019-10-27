@@ -59,6 +59,7 @@ signals:
 
 public slots:
     void  ProcessAnalyzedFrame(VideoFrame* pCurrentFrame, AnalysisResults* results);
+    void  ProcessSourcePacket(QSharedPointer<AVPacket> pInPacket);
     void  AddFalseEventDiffBuffer(VideoBuffer *buffer);
 
 private slots:

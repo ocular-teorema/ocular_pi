@@ -184,6 +184,13 @@ void StreamRecorder::CloseFile()
     DEBUG_MESSAGE0("StreamRecorder", "CloseFile() called");
     if (m_fileOpened)
     {
+        // Free extradata memory
+        if (NULL != m_pFormatCtx->streams[0]->codecpar->extradata)
+        {
+            free(m_pFormatCtx->streams[0]->codecpar->extradata);
+            m_pFormatCtx->streams[0]->codecpar->extradata = NULL;
+        }
+
         // Write format trailer
         av_write_trailer(m_pFormatCtx);
         avio_closep(&m_pFormatCtx->pb);

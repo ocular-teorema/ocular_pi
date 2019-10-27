@@ -192,8 +192,19 @@ void CameraPipeline::ConnectSignals()
                      pStreamRecorder, SLOT(WritePacket(QSharedPointer<AVPacket>)));
 
     // Special case if we do not have any analysis at all (record only)
-    if (pDataDirectory->analysisParams.differenceBasedAnalysis ||
-        pDataDirectory->analysisParams.motionBasedAnalysis)
+    if (!pDataDirectory->analysisParams.differenceBasedAnalysis &&
+        !pDataDirectory->analysisParams.motionBasedAnalysis)
+    {/*
+        QObject::connect(pRtspCapture, SIGNAL(NewPacketReceived(QSharedPointer<AVPacket>)),
+                         pVideoStatistics, SLOT(ProcessSourcePacket(QSharedPointer<AVPacket>)));
+
+        QObject::connect(pStreamRecorder, SIGNAL(NewFileOpened(QString)),
+                         pStatisticDBIntf, SLOT(NewArchiveFileName(QString)));
+
+        QObject::connect(pVideoStatistics, SIGNAL(StatisticPeriodReady(IntervalStatistics*)),
+                         pStatisticDBIntf, SLOT(PerformWriteStatistic(IntervalStatistics*)));*/
+    }
+    else // If we have any analysis on
     {
         // Interaction between FrameBuffer and Analyzer module
         QObject::connect(pFrameBuffer, SIGNAL(FrameAdded()), pVideoAnalyzer, SLOT(DoAnalyze()));
