@@ -71,16 +71,31 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     pResultOutput->moveToThread(pProcessingThread);
     QObject::connect(pProcessingThread, SIGNAL(finished()), pResultOutput, SLOT(deleteLater()));
 
+    if (!pDataDirectory->pipelineParams.smallOutputUrl.trimmed().isEmpty())
+    {
+        pSmallStreamOutput = new ResultVideoOutput(pDataDirectory->pipelineParams.smallOutputUrl);
+        pSmallStreamOutput->moveToThread(pProcessingThread);
+        QObject::connect(pProcessingThread, SIGNAL(finished()), pSmallStreamOutput, SLOT(deleteLater()));
+    }
+
     //
     // Create Objects in other threads
     //
 
     // Now we can create Capture object
     // Move pRtspCapture object to its thread and connect proper signals
-    pRtspCapture = new RTSPCapture(pFrameBuffer);
+    pRtspCapture = new RTSPCapture(pDataDirectory->pipelineParams.inputStreamUrl, pFrameBuffer);
     pRtspCapture->moveToThread(pCaptureThread);
     QObject::connect(pCaptureThread, SIGNAL(started()),  pRtspCapture,   SLOT(StartCapture())); // Start processing, when thread starts
     QObject::connect(pCaptureThread, SIGNAL(finished()), pRtspCapture,   SLOT(deleteLater()));  // Delete object after thread is finished
+
+    if (!pDataDirectory->pipelineParams.smallStreamUrl.trimmed().isEmpty())
+    {
+        pRtspSmallStreamCapture = new RTSPCapture(pDataDirectory->pipelineParams.smallStreamUrl);
+        pRtspSmallStreamCapture->moveToThread(pCaptureThread);
+        QObject::connect(pCaptureThread, SIGNAL(started()),  pRtspSmallStreamCapture, SLOT(StartCapture()));
+        QObject::connect(pCaptureThread, SIGNAL(finished()), pRtspSmallStreamCapture, SLOT(deleteLater()));
+    }
 
     // Statistic DB interface object
     // Slow operations on statistic DB moved to separate thread
@@ -164,6 +179,12 @@ void CameraPipeline::ConnectSignals()
     QObject::connect(this, SIGNAL(ProcessingStopped()), pStreamRecorder, SLOT(Close()));
     QObject::connect(this, SIGNAL(ProcessingStopped()), pHealthChecker, SLOT(Stop()));
 
+    if (NULL != pSmallStreamOutput && NULL != pRtspSmallStreamCapture)
+    {
+        QObject::connect(this, SIGNAL(ProcessingStopped()), pSmallStreamOutput, SLOT(Close()));
+        QObject::connect(this, SIGNAL(ProcessingStopped()), pRtspSmallStreamCapture, SLOT(StopCapture()));
+    }
+
     // We should restart on timeout erros and fire notifications!
     QObject::connect(pHealthChecker, SIGNAL(TimeoutDetected(QString)), this, SLOT(TimeoutHappened(QString)));
 
@@ -190,6 +211,15 @@ void CameraPipeline::ConnectSignals()
 
     QObject::connect(pRtspCapture, SIGNAL(NewPacketReceived(QSharedPointer<AVPacket>)),
                      pStreamRecorder, SLOT(WritePacket(QSharedPointer<AVPacket>)));
+
+    if (NULL != pSmallStreamOutput && NULL != pRtspSmallStreamCapture)
+    {
+        QObject::connect(pRtspSmallStreamCapture, SIGNAL(NewCodecParams(AVStream*)),
+                         pSmallStreamOutput, SLOT(Open(AVStream*)));
+
+        QObject::connect(pRtspSmallStreamCapture, SIGNAL(NewPacketReceived(QSharedPointer<AVPacket>)),
+                         pSmallStreamOutput, SLOT(WritePacket(QSharedPointer<AVPacket>)));
+    }
 
     // Special case if we do not have any analysis at all (record only)
     if (!pDataDirectory->analysisParams.differenceBasedAnalysis &&

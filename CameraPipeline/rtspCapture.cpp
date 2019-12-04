@@ -5,7 +5,7 @@
 
 #include "rtspCapture.h"
 
-RTSPCapture::RTSPCapture(FrameCircularBuffer *pFrameBuffer) :
+RTSPCapture::RTSPCapture(QString uri, FrameCircularBuffer *pFrameBuffer) :
     QObject(NULL),
     m_pCaptureTimer(NULL),
     m_pFrameBuffer(pFrameBuffer),
@@ -19,9 +19,10 @@ RTSPCapture::RTSPCapture(FrameCircularBuffer *pFrameBuffer) :
     DataDirectory*            pDataDirectory = DataDirectoryInstance::instance();
 
     m_fps = pDataDirectory->pipelineParams.fps;
-    m_rtspUri = pDataDirectory->pipelineParams.inputStreamUrl;
+    m_rtspUri = uri;
     m_doDecoding = pDataDirectory->analysisParams.differenceBasedAnalysis ||
                    pDataDirectory->analysisParams.motionBasedAnalysis;
+    m_doDecoding = m_doDecoding && (pFrameBuffer != NULL);
 }
 
 RTSPCapture::~RTSPCapture()

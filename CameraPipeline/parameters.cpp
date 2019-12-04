@@ -29,7 +29,9 @@ void CommonPipelineParameters::readParameters(QSettings &ini)
     pipelineName            = ini.value("PipelineParams/Pipeline Name", "cam1").toString();
     cameraName              = ini.value("PipelineParams/Camera name", "Camera #1").toString();
     inputStreamUrl          = ini.value("PipelineParams/Input Stream Url", "rtmp://localhost/live/input").toString();
+    smallStreamUrl          = ini.value("PipelineParams/Small Stream Url", "").toString();
     outputUrl               = ini.value("PipelineParams/Output Url", "ws://localhost:1234").toString();
+    smallOutputUrl          = ini.value("PipelineParams/Small Output Url", "").toString();
     sourceOutputUrl         = ini.value("PipelineParams/Source Output Url", "rtmp://localhost/live/cam1").toString();
     fps                     = ini.value("PipelineParams/fps", 10).toInt();
     globalScale             = ini.value("PipelineParams/Global Scale", 1.0).toDouble();

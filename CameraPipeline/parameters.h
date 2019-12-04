@@ -35,7 +35,9 @@ struct CommonPipelineParameters
     QString     pipelineName;
     QString     cameraName;
     QString     inputStreamUrl;
+    QString     smallStreamUrl;
     QString     outputUrl;
+    QString     smallOutputUrl;
     QString     sourceOutputUrl;
     QString     databasePath;
     QString     archivePath;

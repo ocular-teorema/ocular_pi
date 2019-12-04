@@ -12,7 +12,7 @@ class RTSPCapture : public QObject
 {
     Q_OBJECT
 public:
-    RTSPCapture(FrameCircularBuffer *pFrameBuffer);
+    RTSPCapture(QString uri, FrameCircularBuffer *pFrameBuffer = NULL);
     ~RTSPCapture();
 
     static int ProbeStreamParameters(const char *url, double* fps, int* w, int* h);

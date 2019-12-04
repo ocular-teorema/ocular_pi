@@ -25,6 +25,7 @@ public:
 
     // Objects
     RTSPCapture*            pRtspCapture;           /// Capture object (works in separate thread)
+    RTSPCapture*            pRtspSmallStreamCapture;/// Capture object (for small stream)
     StreamRecorder*         pStreamRecorder;        /// Recorder object (works in separate thread)
     VideoAnalyzer*          pVideoAnalyzer;         /// VideoAnalyzer object (works in processing thread)
     VideoStatistics*        pVideoStatistics;       /// Object for processing period statistics
@@ -32,6 +33,7 @@ public:
     EventHandler*           pEventHandler;          /// Object for handling alert decisions and event-related stuff
     ResultVideoOutput*      pSourceOutput;          /// Object for source stream output
     ResultVideoOutput*      pResultOutput;          /// Object for stream output
+    ResultVideoOutput*      pSmallStreamOutput;     /// Object for small stream output
     HealthChecker*          pHealthChecker;         /// Object that performs pipeline health check
 
     /// Frame buffer class for asynchronious frame exchange between Capture and Analyzer
