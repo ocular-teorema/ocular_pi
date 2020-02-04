@@ -299,7 +299,7 @@ PacketBuffer::~PacketBuffer()
 
 void PacketBuffer::AddPacket(QSharedPointer<AVPacket> pPacket)
 {
-    m_pPackets[m_currentIndex] = pPacket;
+    m_pPackets[m_currentIndex] = QSharedPointer<AVPacket>(av_packet_clone(pPacket.data()), [](AVPacket *pkt){av_packet_free(&pkt);});
     m_currentIndex = (m_currentIndex + 1) % m_bufferSize;
     m_packetsWritten++;
 

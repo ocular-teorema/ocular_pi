@@ -77,6 +77,10 @@ CameraPipeline::CameraPipeline(QObject *parent) :
         pSmallStreamOutput->moveToThread(pProcessingThread);
         QObject::connect(pProcessingThread, SIGNAL(finished()), pSmallStreamOutput, SLOT(deleteLater()));
     }
+    else
+    {
+        pSmallStreamOutput = NULL;
+    }
 
     //
     // Create Objects in other threads
@@ -95,6 +99,10 @@ CameraPipeline::CameraPipeline(QObject *parent) :
         pRtspSmallStreamCapture->moveToThread(pCaptureThread);
         QObject::connect(pCaptureThread, SIGNAL(started()),  pRtspSmallStreamCapture, SLOT(StartCapture()));
         QObject::connect(pCaptureThread, SIGNAL(finished()), pRtspSmallStreamCapture, SLOT(deleteLater()));
+    }
+    else
+    {
+        pRtspSmallStreamCapture = NULL;
     }
 
     // Statistic DB interface object
