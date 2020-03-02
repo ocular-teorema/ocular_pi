@@ -23,6 +23,7 @@ public:
 
 public slots:
    void  eventHandler(EventDescription eventDescription);
+   void  errorMessageHandler(int type, QString owner, QString message);
 
 signals:
     void securityReactionEvent(EventDescription eventDescription);

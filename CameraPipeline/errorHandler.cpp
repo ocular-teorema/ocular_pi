@@ -78,6 +78,8 @@ void ErrorHandler::ErrorMessage(ErrorType errType, const char* ownerName, const 
 
     m_mutex.unlock();
 
+    emit Message((int)errType, QString(ownerName), QString(message));
+
     if (errType == ERR_TYPE_CRITICAL)
     {
         emit CriticalError(errMsg);
@@ -105,5 +107,7 @@ void ErrorHandler::DebugMessage(const char* ownerName, const char* message)
     }
 
     m_mutex.unlock();
+
+    emit Message(0, QString(ownerName), QString(message));
 }
 
