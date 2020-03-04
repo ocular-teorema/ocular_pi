@@ -94,21 +94,3 @@ void DataDirectory::eventHandler(EventDescription eventDescription)
         mTcpSocket->write(out.append(QByteArray(4, 0)));
     }
 }
-
-void DataDirectory::errorMessageHandler(int type, QString owner, QString message)
-{
-    if (NULL != mTcpSocket)
-    {
-        QJsonObject  object;
-
-        object.insert("camId", pipelineParams.cameraName);
-        object.insert("errorType", type);
-        object.insert("moduleName", owner);
-        object.insert("errorMessage", message);
-
-        //ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "DataDirectory", "Writing json to TCP: %s", doc.toJson().constData());
-        QJsonDocument doc(object);
-        QByteArray out(doc.toJson(QJsonDocument::Compact));
-        mTcpSocket->write(out.append(QByteArray(4, 0)));
-    }
-}

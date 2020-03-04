@@ -57,12 +57,11 @@ public slots:
     void    UnpausePipeline();
     void    TimeoutHappened(QString msg);
     void    CriticalErrorHappened(QString msg);
-    void    CheckParamsAndExitIfBad();
 
 private:
     bool    m_isRunning;                        /// Flag, if processing is currently active
 
-    void    ProbeParams();
+    int     CheckParams();
     void    ConnectSignals();
     void    DisconnectSignals();
     void    CheckRequiredFolders();             /// Check for archive folders exist and create if needed

@@ -12,20 +12,17 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     // av_register_all(); // Deprecated since ffmpeg 4.x
     avformat_network_init();
 
-    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
-    ErrorHandler*  pErrorHandler = ErrorHandler::instance();
-
-    // Post error messages to DataDirectory
-    QObject::connect(pErrorHandler, SIGNAL(Message(int,QString,QString)),
-                     pDataDirectory, SLOT(errorMessageHandler(int,QString,QString)));
-    // Error handler also has functionality to report on critical errors
-    QObject::connect(pErrorHandler, SIGNAL(CriticalError(QString)), this, SLOT(CriticalErrorHappened(QString)));
-
     // Probe input stream and replace invalid parameters if any
-    ProbeParams();
+    if (CAMERA_PIPELINE_OK != CheckParams())
+    {
+        ERROR_MESSAGE0(ERR_TYPE_ERROR, "CameraPipeline", "Failed to get parameters of input stream. Exiting...");
+        return;
+    }
 
     // Check for archive folders exist
     CheckRequiredFolders();
+
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
     DEBUG_MESSAGE0("CameraPipeline", "CameraPipeline constructor called\n");
 
@@ -174,6 +171,7 @@ CameraPipeline::~CameraPipeline()
 
 void CameraPipeline::ConnectSignals()
 {
+    ErrorHandler*  pErrorHandler = ErrorHandler::instance();
     DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
     // Connect all objects that needs to be regulary checked for their activity
@@ -197,6 +195,9 @@ void CameraPipeline::ConnectSignals()
 
     // We should restart on timeout erros and fire notifications!
     QObject::connect(pHealthChecker, SIGNAL(TimeoutDetected(QString)), this, SLOT(TimeoutHappened(QString)));
+
+    // Event handler also has functionality to report on critical errors
+    QObject::connect(pErrorHandler, SIGNAL(CriticalError(QString)), this, SLOT(CriticalErrorHappened(QString)));
 
     // Source stream output and stream recorder will work for both modes (record-only and analysis)
     QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*)),
@@ -352,18 +353,9 @@ void CameraPipeline::CriticalErrorHappened(QString msg)
     QTimer::singleShot(10000, this, SLOT(StopPipeline()));
 }
 
-void CameraPipeline::CheckParamsAndExitIfBad()
-{
-    if ((DataDirectoryInstance::instance())->pipelineParams.fps <= 0)
-    {
-        CriticalErrorHappened("Timeout happened while probing input stream parameters. Exiting...");
-    }
-}
-
-void CameraPipeline::ProbeParams()
+int CameraPipeline::CheckParams()
 {
     DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
-    QTimer::singleShot(30000, this, SLOT(CheckParamsAndExitIfBad()));
 
     if (pDataDirectory->pipelineParams.fps <= 0 || pDataDirectory->analysisParams.downscaleCoeff <= 0) {
 
@@ -378,8 +370,7 @@ void CameraPipeline::ProbeParams()
 
         if (ret != CAMERA_PIPELINE_OK)
         {
-            pDataDirectory->pipelineParams.fps = 0;
-            return;
+            return ret;
         }
 
         ERROR_MESSAGE3(ERR_TYPE_MESSAGE, "CameraPipeline", "Detected fps = %f, size = %dx%d", fps, w, h);
@@ -399,7 +390,9 @@ void CameraPipeline::ProbeParams()
             coeff = (w > 2500) ? 0.05 : coeff;
             pDataDirectory->analysisParams.downscaleCoeff = coeff;
         }
+
     }
+    return CAMERA_PIPELINE_OK;
 }
 
 void CameraPipeline::CheckRequiredFolders()
