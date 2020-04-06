@@ -50,14 +50,11 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
 {
     QSqlQuery   query;
     QByteArray  heatmap;
-    QBuffer     heatmapBuffer(&heatmap);
 
     query.prepare("INSERT INTO records "
                   "(cam, date, start_time, end_time, media_source, video_archive, heatmap, stats_data, start_posix_time, end_posix_time) "
                   "VALUES "
                   "(:cam, :date, :startTime, :endTime, :mediaSource, :videoArchive, :heatmap, :statsData, :startPosix, :endPosix)");
-
-    heatmapBuffer.open(QIODevice::WriteOnly);
 
     // Cam name
     query.bindValue(":cam", (DataDirectoryInstance::instance())->pipelineParams.pipelineName.toUtf8().constData());
@@ -65,10 +62,12 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
     // Frame thumbnail (full-size image)
     if (!record.heatmap.isNull())
     {
+        QBuffer     heatmapBuffer(&heatmap);
+        heatmapBuffer.open(QIODevice::WriteOnly);
         record.heatmap.save(&heatmapBuffer, "PNG");
+        heatmapBuffer.close();
+        query.bindValue(":heatmap", QString(heatmap.toBase64()));
     }
-    heatmapBuffer.close();
-    query.bindValue(":heatmap", QString(heatmap.toBase64()));
 
     // Date
     if (record.date.isValid())
@@ -115,7 +114,7 @@ ErrorCode AnalysisRecordDao::InsertRecord(const AnalysisRecordModel& record)
     {
         QByteArray empty;
         query.bindValue(":statsData", empty);
-        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "AnalysisRecordSQLiteDao", "NULL stats data object inserted");
+        DEBUG_MESSAGE0("AnalysisRecordSQLiteDao", "NULL stats data object inserted");
     }
 
     // Run insert query

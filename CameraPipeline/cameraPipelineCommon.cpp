@@ -417,7 +417,7 @@ void VideoBuffer::SetSize(int width, int height)
 
         m_width = width;
         m_height = height;
-        m_stride = ((width + 15)>>4)<<4;
+        m_stride = m_width;//((width + 15)>>4)<<4;
 
         // Allocate internal buffer
         m_pBuffer = new unsigned char[m_stride * m_height];
@@ -674,7 +674,6 @@ void VideoBuffer::Blur(int radius, float gain)
 {
     // Blur should be performed only on even region (to avoid falitures inside opencv)
     cv::Mat  cur(m_height, m_width, CV_8UC1, m_pBuffer, m_stride);
-
     cv::blur(cur, cur, cv::Size(radius, radius));
 
     if (gain != 1.0f)

@@ -401,8 +401,11 @@ void StatisticDBInterface::DelayedWrite()
 
     DEBUG_MESSAGE1("StatisticDBInterface", "DelayedWrite() called ThreadID = %p", QThread::currentThreadId());
 
-    // Blur accumulator buffer
-    stats->accBuffer.Blur(7);
+    if (pDataDirectory->analysisParams.differenceBasedAnalysis || pDataDirectory->analysisParams.motionBasedAnalysis)
+    {
+        // Blur accumulator buffer
+        stats->accBuffer.Blur(7);
+    }
 
     newRecord.id            = 0; // will be autoincremented in DB
     newRecord.date          = stats->date;
@@ -411,11 +414,19 @@ void StatisticDBInterface::DelayedWrite()
     newRecord.endTime       = stats->endTime;
     newRecord.mediaSource   = pDataDirectory->pipelineParams.inputStreamUrl;
     newRecord.videoArchive  = stats->archiveFile;
-    newRecord.heatmap       = CreateHeatmap(&stats->backgroundBuffer, &stats->accBuffer);
 
-    if (CAMERA_PIPELINE_OK != stats->ToByteArray(&newRecord.statsData))
+    if (pDataDirectory->analysisParams.differenceBasedAnalysis || pDataDirectory->analysisParams.motionBasedAnalysis)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Unable to convert collected statistics to BLOB");
+        newRecord.heatmap = CreateHeatmap(&stats->backgroundBuffer, &stats->accBuffer);
+        if (CAMERA_PIPELINE_OK != stats->ToByteArray(&newRecord.statsData))
+        {
+            ERROR_MESSAGE0(ERR_TYPE_ERROR, "StatisticDBInterface", "Unable to convert collected statistics to BLOB");
+        }
+    }
+    else
+    {
+        newRecord.statsData = QByteArray();
+        newRecord.heatmap = QImage();
     }
 
     m_pDAO->InsertRecord(newRecord);
