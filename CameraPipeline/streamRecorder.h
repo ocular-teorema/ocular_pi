@@ -48,8 +48,9 @@ signals:
     void    Ping(const char* name, int timeoutMs);  /// Ping signal for health checker
 
 public slots:
-    void    CopyCodecParameters(AVStream *pVideoStream); /// Store input contexts parameters
+    void    CopyCodecParameters(AVStream *pVideoStream, AVStream *pAudioStream); /// Store input contexts parameters
     void    WritePacket(QSharedPointer<AVPacket> pInPacket);
+    void    WriteAudioPacket(QSharedPointer<AVPacket> pInPacket);
     void    WriteEventFile(EventDescription event);
     void    Open();                             /// Init
     void    Close();                            /// Close current file and deinit
@@ -63,15 +64,19 @@ private:
     QString             m_shortNamePattern;     /// Name pattern for archive file url
 
     int64_t             m_firstDts;             /// First packet dts for each file
+    int64_t             m_firstAudioDts;        /// First packet dts for each file
     bool                m_fileOpened;           /// Indicates, whether archive file has been opened
     bool                m_needStartNewFile;     /// Indicates that we need to start new file on next received keyframe
 
     IntervalTimer*      m_pIntervalTimer;       /// Intervals handler
 
-    AVRational          m_inputTimebase;
-    AVCodecParameters*  m_pCodecParams;         /// Codec parameters from VideoEncoder (for writing packets from packetBuffer)
-    AVFormatContext*    m_pFormatCtx;           /// Output format context
+    AVRational          m_inputVideoTimebase;
+    AVRational          m_inputAudioTimebase;
+    AVCodecParameters*  m_pVideoCodecParams;    /// Codec parameters from capture
+    AVCodecParameters*  m_pAudioCodecParams;    /// Audio codec parameters from capture
     AVStream*           m_pVideoStream;         /// Video stream pointer
+    AVStream*           m_pAudioStream;         /// Audio stream pointer
+    AVFormatContext*    m_pFormatCtx;           /// Output format context
 
     PacketBuffer*       m_pPacketBuffer;        /// Small packet buffer for storing last minute of video stream
 

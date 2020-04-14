@@ -18,9 +18,10 @@ public:
     static int ProbeStreamParameters(const char *url, double* fps, int* w, int* h);
 
 signals:
-    void    NewCodecParams(AVStream* pCodecParams);                 /// Signal about new input codec parameters
-    void    NewPacketReceived(QSharedPointer<AVPacket> pPacket);    /// Signal that we have read new packet
-    void    Ping(const char* name, int timeoutMs);                  /// Ping signal for health checker
+    void    NewCodecParams(AVStream* pVideoStream, AVStream* pAudioStream); /// Signal about new input codec parameters
+    void    NewPacketReceived(QSharedPointer<AVPacket> pPacket);            /// Signal that we have read new packet
+    void    NewAudioPacketReceived(QSharedPointer<AVPacket> pPacket);       /// Signal that we have read new audio packet
+    void    Ping(const char* name, int timeoutMs);                          /// Ping signal for health checker
 
 public slots:
     void    StopCapture();
@@ -48,6 +49,7 @@ private:
     AVCodecContext*         m_pCodecContext;
     AVFrame*                m_pFrame;           /// Decoded frame locates here
     int                     m_videoStreamIndex;
+    int                     m_audioStreamIndex;
     int                     m_readErrorNumber;  /// Number of read frame error in a row
     bool                    m_stop;             /// Flag to exit from while loop
     int64_t                 m_framesToSnapshot; /// Number of frames left to next snapshot

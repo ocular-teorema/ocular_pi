@@ -95,8 +95,9 @@ static int WritePacketCallback(void* opaque, uint8_t* buf, int size)
     return size;
 }
 
-void ResultVideoOutput::Open(AVStream* pInStream)
+void ResultVideoOutput::Open(AVStream* pInStream, AVStream *pInAudioStream)
 {
+    Q_UNUSED(pInAudioStream);
     DEBUG_MESSAGE0("ResultVideoOutput", "ReallocContexts() called");
     m_outputInitialized = false;
 

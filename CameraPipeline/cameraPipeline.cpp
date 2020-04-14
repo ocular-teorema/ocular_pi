@@ -200,14 +200,14 @@ void CameraPipeline::ConnectSignals()
     QObject::connect(pErrorHandler, SIGNAL(CriticalError(QString)), this, SLOT(CriticalErrorHappened(QString)));
 
     // Source stream output and stream recorder will work for both modes (record-only and analysis)
-    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*)),
-                     pSourceOutput, SLOT(Open(AVStream*)));
+    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*, AVStream*)),
+                     pSourceOutput, SLOT(Open(AVStream*, AVStream*)));
 
-    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*)),
-                     pResultOutput, SLOT(Open(AVStream*)));
+    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*, AVStream*)),
+                     pResultOutput, SLOT(Open(AVStream*, AVStream*)));
 
-    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*)),
-                     pStreamRecorder, SLOT(CopyCodecParameters(AVStream*)));
+    QObject::connect(pRtspCapture, SIGNAL(NewCodecParams(AVStream*, AVStream*)),
+                     pStreamRecorder, SLOT(CopyCodecParameters(AVStream*, AVStream*)));
 
     qRegisterMetaType< QSharedPointer<AVPacket > >("QSharedPointer<AVPacket >");
     QObject::connect(pRtspCapture, SIGNAL(NewPacketReceived(QSharedPointer<AVPacket>)),
@@ -219,6 +219,8 @@ void CameraPipeline::ConnectSignals()
 
     QObject::connect(pRtspCapture, SIGNAL(NewPacketReceived(QSharedPointer<AVPacket>)),
                      pStreamRecorder, SLOT(WritePacket(QSharedPointer<AVPacket>)));
+    QObject::connect(pRtspCapture, SIGNAL(NewAudioPacketReceived(QSharedPointer<AVPacket>)),
+                     pStreamRecorder, SLOT(WriteAudioPacket(QSharedPointer<AVPacket>)));
 
     if (NULL != pSmallStreamOutput && NULL != pRtspSmallStreamCapture)
     {

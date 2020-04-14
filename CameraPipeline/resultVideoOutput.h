@@ -26,7 +26,7 @@ public:
 
 public slots:
     void    Close();
-    void    Open(AVStream* pInStream);
+    void    Open(AVStream* pInStream, AVStream* pInAudioStream);
     void    WritePacket(QSharedPointer<AVPacket> pInPacket);
 
     void    OnWsConnected();

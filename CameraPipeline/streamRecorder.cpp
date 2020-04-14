@@ -8,9 +8,11 @@ StreamRecorder::StreamRecorder() :
     m_firstDts(AV_NOPTS_VALUE),
     m_fileOpened(false),
     m_needStartNewFile(false),
-    m_pCodecParams(NULL),
-    m_pFormatCtx(NULL),
-    m_pVideoStream(NULL)
+    m_pVideoCodecParams(NULL),
+    m_pAudioCodecParams(NULL),
+    m_pVideoStream(NULL),
+    m_pAudioStream(NULL),
+    m_pFormatCtx(NULL)
 {
 
 }
@@ -19,9 +21,13 @@ StreamRecorder::~StreamRecorder()
 {
     DEBUG_MESSAGE0("StreamRecorder", "~StreamRecorder() called");
 
-    if (NULL != m_pCodecParams)
+    if (NULL != m_pVideoCodecParams)
     {
-        avcodec_parameters_free(&m_pCodecParams);
+        avcodec_parameters_free(&m_pVideoCodecParams);
+    }
+    if (NULL != m_pAudioCodecParams)
+    {
+        avcodec_parameters_free(&m_pAudioCodecParams);
     }
 
     if (NULL != m_pFormatCtx)
@@ -65,9 +71,14 @@ void StreamRecorder::Close()
     // At first - close current file
     CloseFile();
 
-    if (NULL != m_pCodecParams)
+    if (NULL != m_pVideoCodecParams)
     {
-        avcodec_parameters_free(&m_pCodecParams);
+        avcodec_parameters_free(&m_pVideoCodecParams);
+    }
+
+    if (NULL != m_pAudioCodecParams)
+    {
+        avcodec_parameters_free(&m_pAudioCodecParams);
     }
 
     if (NULL != m_pFormatCtx)
@@ -81,15 +92,32 @@ void StreamRecorder::Close()
     DEBUG_MESSAGE0("StreamRecorder", "Close() finished");
 }
 
-void StreamRecorder::CopyCodecParameters(AVStream* pVideoStream)
+void StreamRecorder::CopyCodecParameters(AVStream* pVideoStream, AVStream *pAudioStream)
 {
-    if (NULL != m_pCodecParams)
+    if (NULL != m_pVideoCodecParams)
     {
-        avcodec_parameters_free(&m_pCodecParams);
+        avcodec_parameters_free(&m_pVideoCodecParams);
     }
-    m_pCodecParams = avcodec_parameters_alloc();
-    avcodec_parameters_copy(m_pCodecParams, pVideoStream->codecpar);
-    m_inputTimebase = pVideoStream->time_base;
+
+    if (NULL != m_pAudioCodecParams)
+    {
+        avcodec_parameters_free(&m_pAudioCodecParams);
+    }
+
+    m_pVideoCodecParams = avcodec_parameters_alloc();
+    avcodec_parameters_copy(m_pVideoCodecParams, pVideoStream->codecpar);
+    m_inputVideoTimebase = pVideoStream->time_base;
+
+    if (NULL != pAudioStream)
+    {
+        m_pAudioCodecParams = avcodec_parameters_alloc();
+        avcodec_parameters_copy(m_pAudioCodecParams, pAudioStream->codecpar);
+        m_inputAudioTimebase = pAudioStream->time_base;
+    }
+    else
+    {
+        m_pAudioCodecParams = NULL;
+    }
 
     // Same for PacketBuffer
     if (NULL != m_pPacketBuffer->inputCodecParams)
@@ -137,11 +165,30 @@ void StreamRecorder::StartFile(QString startTime)
 
         m_pVideoStream->index = 0; // Default video stream index
         m_pVideoStream->time_base = av_make_q(1, DEFAULT_TIMEBASE);
-
-        if (0 > avcodec_parameters_copy(m_pVideoStream->codecpar, m_pCodecParams))
+        if (0 > avcodec_parameters_copy(m_pVideoStream->codecpar, m_pVideoCodecParams))
         {
             ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "avcodec_parameters_copy() failed");
             return;
+        }
+
+        // Check if we have audio
+        if (NULL != m_pAudioCodecParams)
+        {
+            m_pAudioStream = avformat_new_stream(m_pFormatCtx, NULL);
+            if (NULL == m_pAudioStream)
+            {
+                ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "avformat_new_stream() failed");
+                return;
+            }
+
+            m_pAudioStream->index = 1; // Default audio stream index
+            m_pAudioStream->time_base = av_make_q(1, DEFAULT_TIMEBASE);
+            m_pAudioCodecParams->codec_tag = 0;
+            if (0 > avcodec_parameters_copy(m_pAudioStream->codecpar, m_pAudioCodecParams))
+            {
+                ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "avcodec_parameters_copy() failed");
+                return;
+            }
         }
 
         // Open output file, if it is allowed by format
@@ -174,6 +221,7 @@ void StreamRecorder::StartFile(QString startTime)
 
         m_fileOpened = true;
         m_firstDts = AV_NOPTS_VALUE;
+        m_firstAudioDts = AV_NOPTS_VALUE;
         m_needStartNewFile = false;
         DEBUG_MESSAGE0("StreamRecorder", "StartFile() finished. File opened for writing");
     }
@@ -216,7 +264,7 @@ void StreamRecorder::IntervalFinished(QDateTime currentTime)
 
 void StreamRecorder::WritePacket(QSharedPointer<AVPacket> pInPacket)
 {
-    DEBUG_MESSAGE1("StreamRecorder", "NewEncodedFrame() called. TS = %ld", pInPacket->dts);
+    DEBUG_MESSAGE1("StreamRecorder", "WritePacket() called. TS = %ld", pInPacket->dts);
 
     QDateTime curDateTime = QDateTime::fromMSecsSinceEpoch(pInPacket->pos);
 
@@ -240,7 +288,31 @@ void StreamRecorder::WritePacket(QSharedPointer<AVPacket> pInPacket)
         pPacket->pts -= m_firstDts;
         pPacket->dts -= m_firstDts;
         pPacket->stream_index = 0; // Default video stream index
-        av_packet_rescale_ts(pPacket, m_inputTimebase, m_pVideoStream->time_base);
+        av_packet_rescale_ts(pPacket, m_inputVideoTimebase, m_pVideoStream->time_base);
+        int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
+        av_packet_free(&pPacket);
+        if (res < 0)
+        {
+            ERROR_MESSAGE0(ERR_TYPE_ERROR, "StreamRecorder", "av_interleaved_write_frame() failed");
+            return;
+        }
+    }
+}
+
+void StreamRecorder::WriteAudioPacket(QSharedPointer<AVPacket> pInPacket)
+{
+    if (m_fileOpened)
+    {
+        if (AV_NOPTS_VALUE == m_firstAudioDts)
+        {
+            m_firstAudioDts = pInPacket->dts;
+        }
+
+        AVPacket* pPacket = av_packet_clone(pInPacket.data());
+        pPacket->pts -= m_firstAudioDts;
+        pPacket->dts -= m_firstAudioDts;
+        pPacket->stream_index = 1; // Default audio stream index
+        av_packet_rescale_ts(pPacket, m_inputAudioTimebase, m_pAudioStream->time_base);
         int res = av_interleaved_write_frame(m_pFormatCtx, pPacket);
         av_packet_free(&pPacket);
         if (res < 0)

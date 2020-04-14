@@ -13,6 +13,7 @@ RTSPCapture::RTSPCapture(QString uri, FrameCircularBuffer *pFrameBuffer) :
     m_pCodecContext(NULL),
     m_pFrame(NULL),
     m_videoStreamIndex(0),
+    m_audioStreamIndex(0),
     m_readErrorNumber(0),
     m_framesToSnapshot(0)
 {
@@ -188,6 +189,7 @@ ErrorCode RTSPCapture::InitCapture()
 
     // Find the first video stream
     m_videoStreamIndex = av_find_best_stream(m_pInputContext, AVMEDIA_TYPE_VIDEO, -1, -1, &pCodec, 0);
+    m_audioStreamIndex = av_find_best_stream(m_pInputContext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if (m_videoStreamIndex < 0 || (NULL == pCodec))
     {
         ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Unable to find video stream or appropriate decoder");
@@ -223,7 +225,8 @@ ErrorCode RTSPCapture::InitCapture()
     m_pInputContext->streams[m_videoStreamIndex]->codecpar->codec_tag = 0;
 
     // Notify stream recorder, tha we have new codec context
-    emit NewCodecParams(m_pInputContext->streams[m_videoStreamIndex]);
+    emit NewCodecParams(m_pInputContext->streams[m_videoStreamIndex],
+                        (m_audioStreamIndex < 0) ? NULL : m_pInputContext->streams[m_audioStreamIndex]);
 
     m_pFrame = av_frame_alloc();
     if(m_pFrame == NULL)
@@ -238,10 +241,8 @@ ErrorCode RTSPCapture::InitCapture()
     // Is called after RTSPCapture object moved to it's separate thread
     m_pCaptureTimer = new QTimer;
     m_pCaptureTimer->setTimerType(Qt::PreciseTimer);
-    m_pCaptureTimer->setInterval((1000 / m_fps)*0.95);
+    m_pCaptureTimer->setInterval(5); // Read with high fps, since we might have a lot of streams including audio
     QObject::connect(m_pCaptureTimer, SIGNAL(timeout()), this, SLOT(CaptureNewFrame()));
-
-    DEBUG_MESSAGE1("RTSPCapture", "CaptureTimer is connected. Capturing interval was set to %d ms", (int)((1000 / m_fps)*0.95));
     DEBUG_MESSAGE1("RTSPCapture", "Capture thread created id = %p", QThread::currentThreadId());
 
     return CAMERA_PIPELINE_OK;
@@ -299,6 +300,14 @@ void RTSPCapture::CaptureNewFrame()
                 emit NewPacketReceived(pPacket);    // Send new packet signal
             }
             // Exit reading while
+            break;
+        }
+        else if (pPacket.data()->stream_index == m_audioStreamIndex)
+        {
+            if (!m_stop)
+            {
+                emit NewAudioPacketReceived(pPacket);    // Send new packet signal
+            }
             break;
         }
         av_packet_unref(pPacket.data());
