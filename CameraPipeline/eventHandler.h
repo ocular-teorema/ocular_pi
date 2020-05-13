@@ -113,7 +113,7 @@ signals:
     void    EventDiffBufferUpdate(VideoBuffer* eventDiff);
 
 public slots:
-    void    ProcessAnalysisResults(VideoFrame* pCurrentFrame, AnalysisResults* pResults);
+    void    ProcessAnalysisResults(QSharedPointer<VideoFrame> pCurrentFrame, AnalysisResults* pResults);
     void    ProcessIntervalStats(QList<IntervalStatistics*> curStatsList);
     void    SecurityReaction(EventDescription eventDescription);
     void    NewArchiveFileName(QString newFileName);    /// Receive file name from StreamRecorder

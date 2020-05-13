@@ -161,7 +161,7 @@ void VideoStatistics::IntervalFinished(QDateTime currentDateTime)
     // Set motion map internal buffers size
     if (NULL != m_pCurrentFrame)
     {
-        m_currentStats.backgroundBuffer.CopyFrom(m_pCurrentFrame, 0);
+        m_currentStats.backgroundBuffer.CopyFrom(m_pCurrentFrame.data(), 0);
     }
 
     m_currentStatsCopy.CopyFrom(m_currentStats);
@@ -176,7 +176,7 @@ void VideoStatistics::IntervalFinished(QDateTime currentDateTime)
     m_currentStats.Reset();
 }
 
-void VideoStatistics::ProcessAnalyzedFrame(VideoFrame *pCurrentFrame, AnalysisResults *results)
+void VideoStatistics::ProcessAnalyzedFrame(QSharedPointer<VideoFrame> pCurrentFrame, AnalysisResults *results)
 {
     DataDirectory*  pDataDirectory = DataDirectoryInstance::instance();
 

@@ -112,6 +112,7 @@ enum ErrorCode
 
 enum ErrorType
 {
+    ERR_TYPE_STATUS = 0,    // Camera status message
     ERR_TYPE_MESSAGE,       // Just log message
     ERR_TYPE_WARNING,       // Warning
     ERR_TYPE_DISPOSABLE,    // Kind of small error that doesn't affect whole pipeline
@@ -143,6 +144,7 @@ public:
 
 signals:
     void CriticalError(QString err); /// Critical errors sometimes needs to be handled in other places
+    void Message(int type, QString owner, QString err); /// Pass to the DataDirectory
 
 private:
     static ErrorHandler* m_instance;

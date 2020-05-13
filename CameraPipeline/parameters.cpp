@@ -40,6 +40,7 @@ void CommonPipelineParameters::readParameters(QSettings &ini)
     processingIntervalSec   = ini.value("PipelineParams/Processing Interval Sec", 600).toInt();
     statisticIntervalSec    = ini.value("PipelineParams/Statistic Interval Sec", 600).toInt();
     statisticPeriodDays     = ini.value("PipelineParams/Statistic Period Days", 14).toInt();
+    doRecording             = ini.value("PipelineParams/DoRecording", true).toBool();
 }
 
 void EventProcessingParameters::readParameters(QSettings& ini)

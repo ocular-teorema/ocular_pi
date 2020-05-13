@@ -35,12 +35,12 @@ EventHandler::~EventHandler()
     DEBUG_MESSAGE0("EventHandler", "~EventHandler() finished");
 }
 
-void EventHandler::ProcessAnalysisResults(VideoFrame *pCurrentFrame, AnalysisResults *pResults)
+void EventHandler::ProcessAnalysisResults(QSharedPointer<VideoFrame> pCurrentFrame, AnalysisResults *pResults)
 {
     DEBUG_MESSAGE0("EventHandler", "ProcessAnalysisResults() started");
 
     // Make a frame copy because we should not draw on input frames
-    m_outputFrame.CopyFromVideoFrame(pCurrentFrame);
+    m_outputFrame.CopyFromVideoFrame(pCurrentFrame.data());
 
     // Check for calibration errors
     pCalibEventHandler->ProcessResults(pResults);

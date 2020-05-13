@@ -41,6 +41,7 @@ struct CommonPipelineParameters
     QString     sourceOutputUrl;
     QString     databasePath;
     QString     archivePath;
+    bool        doRecording;
 
     int         fps;
     double      globalScale;

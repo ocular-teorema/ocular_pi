@@ -274,7 +274,8 @@ void StreamRecorder::WritePacket(QSharedPointer<AVPacket> pInPacket)
     // Check, if we have keyframe and need to start new file
     m_pIntervalTimer->Tick(curDateTime);
 
-    if ((pInPacket->flags & AV_PKT_FLAG_KEY) && m_needStartNewFile)
+    if ((pInPacket->flags & AV_PKT_FLAG_KEY) && m_needStartNewFile &&
+        (DataDirectoryInstance::instance())->pipelineParams.doRecording)
     {
         CloseFile();
         StartFile(curDateTime.toString("dd_MM_yyyy___HH_mm_ss"));

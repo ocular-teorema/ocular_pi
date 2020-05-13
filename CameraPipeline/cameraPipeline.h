@@ -36,9 +36,6 @@ public:
     ResultVideoOutput*      pSmallStreamOutput;     /// Object for small stream output
     HealthChecker*          pHealthChecker;         /// Object that performs pipeline health check
 
-    /// Frame buffer class for asynchronious frame exchange between Capture and Analyzer
-    FrameCircularBuffer*    pFrameBuffer;
-
     QThread*                pCaptureThread;         /// Interface for capture thread
     QThread*                pRecorderThread;        /// Interface for stream recorder thread
     QThread*                pStatisticThread;       /// Interface for statistic thread

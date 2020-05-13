@@ -12,17 +12,18 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     // av_register_all(); // Deprecated since ffmpeg 4.x
     avformat_network_init();
 
-    // Probe input stream and replace invalid parameters if any
-    if (CAMERA_PIPELINE_OK != CheckParams())
-    {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "CameraPipeline", "Failed to get parameters of input stream. Exiting...");
-        return;
-    }
+    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
+    ErrorHandler*  pErrorHandler = ErrorHandler::instance();
+
+    // Post error messages to DataDirectory
+    QObject::connect(pErrorHandler, SIGNAL(Message(int, QString, QString)),
+                     pDataDirectory, SLOT(errorMessageHandler(int, QString, QString)));
+
+    // Error handler also has functionality to report on critical errors
+    QObject::connect(pErrorHandler, SIGNAL(CriticalError(QString)), this, SLOT(CriticalErrorHappened(QString)));
 
     // Check for archive folders exist
     CheckRequiredFolders();
-
-    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
 
     DEBUG_MESSAGE0("CameraPipeline", "CameraPipeline constructor called\n");
 
@@ -39,15 +40,12 @@ CameraPipeline::CameraPipeline(QObject *parent) :
     QObject::connect(pProcessingThread, SIGNAL(finished()), pProcessingThread, SLOT(deleteLater()));
     QObject::connect(pHealthCheckThread, SIGNAL(finished()), pHealthCheckThread, SLOT(deleteLater()));
 
-    // Create FrameBuffer to pass it to capture and analyzing objects
-    pFrameBuffer = new FrameCircularBuffer(DEFAULT_FRAME_BUFFER_SIZE);
-
     //
     // Create Objects in main processing thread
     //
 
     // Analyzer object
-    pVideoAnalyzer = new VideoAnalyzer(pFrameBuffer);
+    pVideoAnalyzer = new VideoAnalyzer();
     pVideoAnalyzer->moveToThread(pProcessingThread);
     QObject::connect(pProcessingThread, SIGNAL(started()), pVideoAnalyzer, SLOT(StartAnalyze()));
     QObject::connect(pProcessingThread, SIGNAL(finished()), pVideoAnalyzer, SLOT(deleteLater()));
@@ -88,7 +86,7 @@ CameraPipeline::CameraPipeline(QObject *parent) :
 
     // Now we can create Capture object
     // Move pRtspCapture object to its thread and connect proper signals
-    pRtspCapture = new RTSPCapture(pDataDirectory->pipelineParams.inputStreamUrl, pFrameBuffer);
+    pRtspCapture = new RTSPCapture(pDataDirectory->pipelineParams.inputStreamUrl);
     pRtspCapture->moveToThread(pCaptureThread);
     QObject::connect(pCaptureThread, SIGNAL(started()),  pRtspCapture,   SLOT(StartCapture())); // Start processing, when thread starts
     QObject::connect(pCaptureThread, SIGNAL(finished()), pRtspCapture,   SLOT(deleteLater()));  // Delete object after thread is finished
@@ -165,7 +163,6 @@ CameraPipeline::~CameraPipeline()
     if (!pRecorderThread->wait(500))
         pRecorderThread->terminate();
 
-    delete pFrameBuffer;
     DEBUG_MESSAGE0("CameraPipeline", "~CameraPipeline() finished");
 }
 
@@ -246,8 +243,11 @@ void CameraPipeline::ConnectSignals()
     }
     else // If we have any analysis on
     {
+        qRegisterMetaType< QSharedPointer<VideoFrame > >("QSharedPointer<VideoFrame >");
+
         // Interaction between FrameBuffer and Analyzer module
-        QObject::connect(pFrameBuffer, SIGNAL(FrameAdded()), pVideoAnalyzer, SLOT(DoAnalyze()));
+        QObject::connect(pRtspCapture, SIGNAL(NewFrameDecoded(QSharedPointer<VideoFrame >)),
+                         pVideoAnalyzer, SLOT(EnqueueFrame(QSharedPointer<VideoFrame >)), Qt::DirectConnection);
 
         // Inform EventHandler and VideoStatistics that new archive file is started
         QObject::connect(pStreamRecorder, SIGNAL(NewFileOpened(QString)),
@@ -257,8 +257,8 @@ void CameraPipeline::ConnectSignals()
                          pEventHandler, SLOT(NewArchiveFileName(QString)));
 
         // Interaction between Video analyzer and Statistics module
-        QObject::connect(pVideoAnalyzer, SIGNAL(AnalysisFinished(VideoFrame*, AnalysisResults*)),
-                         pVideoStatistics, SLOT(ProcessAnalyzedFrame(VideoFrame*, AnalysisResults*)));
+        QObject::connect(pVideoAnalyzer, SIGNAL(AnalysisFinished(QSharedPointer<VideoFrame >, AnalysisResults*)),
+                         pVideoStatistics, SLOT(ProcessAnalyzedFrame(QSharedPointer<VideoFrame >, AnalysisResults*)));
 
         // Update heatmap (for false alerts)
         QObject::connect(pEventHandler, SIGNAL(EventDiffBufferUpdate(VideoBuffer*)),
@@ -272,8 +272,8 @@ void CameraPipeline::ConnectSignals()
                          pStatisticDBIntf, SLOT(PerformWriteStatistic(IntervalStatistics*)));
 
         // Interaction between Video analyzer and Decision makers
-        QObject::connect(pVideoAnalyzer, SIGNAL(AnalysisFinished(VideoFrame*, AnalysisResults*)),
-                         pEventHandler, SLOT(ProcessAnalysisResults(VideoFrame*,AnalysisResults*)));
+        QObject::connect(pVideoAnalyzer, SIGNAL(AnalysisFinished(QSharedPointer<VideoFrame >, AnalysisResults*)),
+                         pEventHandler, SLOT(ProcessAnalysisResults(QSharedPointer<VideoFrame >,AnalysisResults*)));
 
         // Inform DecisionMaker, that new period statistics received from DB
         QObject::connect(pStatisticDBIntf, SIGNAL(NewPeriodStatistics(QList<IntervalStatistics*>)),
@@ -353,48 +353,6 @@ void CameraPipeline::CriticalErrorHappened(QString msg)
 
     // Stop pipeline and restart (from external restart script) in 10 seconds
     QTimer::singleShot(10000, this, SLOT(StopPipeline()));
-}
-
-int CameraPipeline::CheckParams()
-{
-    DataDirectory* pDataDirectory = DataDirectoryInstance::instance();
-
-    if (pDataDirectory->pipelineParams.fps <= 0 || pDataDirectory->analysisParams.downscaleCoeff <= 0) {
-
-        int ret;
-        int w = 1280;
-        int h = 720;
-        double fps = 10.0;
-
-        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "CameraPipeline", "Probing stream fps and size...");
-        ret = RTSPCapture::ProbeStreamParameters(
-                    pDataDirectory->pipelineParams.inputStreamUrl.toUtf8().constData(), &fps, &w, &h);
-
-        if (ret != CAMERA_PIPELINE_OK)
-        {
-            return ret;
-        }
-
-        ERROR_MESSAGE3(ERR_TYPE_MESSAGE, "CameraPipeline", "Detected fps = %f, size = %dx%d", fps, w, h);
-
-        if (pDataDirectory->pipelineParams.fps <= 0)
-        {
-            pDataDirectory->pipelineParams.fps = (int)(fps + 0.5);
-        }
-
-        if (pDataDirectory->analysisParams.downscaleCoeff <= 0)
-        {
-            double coeff = 0.4;
-            coeff = (w > 720)  ? 0.3  : coeff;
-            coeff = (w > 1200) ? 0.25 : coeff;
-            coeff = (w > 1900) ? 0.15 : coeff;
-            coeff = (w > 2000) ? 0.09 : coeff;
-            coeff = (w > 2500) ? 0.05 : coeff;
-            pDataDirectory->analysisParams.downscaleCoeff = coeff;
-        }
-
-    }
-    return CAMERA_PIPELINE_OK;
 }
 
 void CameraPipeline::CheckRequiredFolders()

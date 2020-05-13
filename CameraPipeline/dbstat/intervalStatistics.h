@@ -58,7 +58,7 @@ signals:
     void  StatisticPeriodReady(IntervalStatistics* stats);
 
 public slots:
-    void  ProcessAnalyzedFrame(VideoFrame* pCurrentFrame, AnalysisResults* results);
+    void  ProcessAnalyzedFrame(QSharedPointer<VideoFrame> pCurrentFrame, AnalysisResults* results);
     void  ProcessSourcePacket(QSharedPointer<AVPacket> pInPacket);
     void  AddFalseEventDiffBuffer(VideoBuffer *buffer);
 
@@ -67,7 +67,7 @@ private slots:
     void  IntervalFinished(QDateTime currentTime);
 
 private:
-    VideoFrame*                 m_pCurrentFrame;
+    QSharedPointer<VideoFrame>  m_pCurrentFrame;
     IntervalTimer*              m_pIntervalTimer;           /// Intervals handler
     IntervalStatistics          m_currentStats;             /// Current interval statistic (for averaging)
     IntervalStatistics          m_currentStatsCopy;         /// Copy of current statistic (for passing to DB interface)

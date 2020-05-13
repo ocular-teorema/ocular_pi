@@ -19,7 +19,6 @@ HEADERS += \
     ../CameraPipeline/eventDescription.h \
     ../CameraPipeline/errorHandler.h \
     ../CameraPipeline/dataDirectoryInstance.h \
-    ../CameraPipeline/frameCircularBuffer.h \
     ../CameraPipeline/healthChecker.h \
     ../CameraPipeline/pipelineConfig.h \
     ../CameraPipeline/parameters.h \
@@ -47,7 +46,6 @@ SOURCES += \
     ../CameraPipeline/eventDescription.cpp \
     ../CameraPipeline/errorHandler.cpp \
     ../CameraPipeline/dataDirectoryInstance.cpp \
-    ../CameraPipeline/frameCircularBuffer.cpp \
     ../CameraPipeline/healthChecker.cpp \
     ../CameraPipeline/parameters.cpp \
     ../CameraPipeline/rtspCapture.cpp \

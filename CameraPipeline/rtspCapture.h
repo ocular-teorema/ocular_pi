@@ -6,21 +6,19 @@
 
 #include "networkUtils/dataDirectory.h"
 #include "cameraPipelineCommon.h"
-#include "frameCircularBuffer.h"
 
 class RTSPCapture : public QObject
 {
     Q_OBJECT
 public:
-    RTSPCapture(QString uri, FrameCircularBuffer *pFrameBuffer = NULL);
+    RTSPCapture(QString uri);
     ~RTSPCapture();
-
-    static int ProbeStreamParameters(const char *url, double* fps, int* w, int* h);
 
 signals:
     void    NewCodecParams(AVStream* pVideoStream, AVStream* pAudioStream); /// Signal about new input codec parameters
     void    NewPacketReceived(QSharedPointer<AVPacket> pPacket);            /// Signal that we have read new packet
     void    NewAudioPacketReceived(QSharedPointer<AVPacket> pPacket);       /// Signal that we have read new audio packet
+    void    NewFrameDecoded(QSharedPointer<VideoFrame> pFrame);             /// Signal that we have decoded another frame
     void    Ping(const char* name, int timeoutMs);                          /// Ping signal for health checker
 
 public slots:
@@ -42,8 +40,6 @@ private:
     float       m_fps;              /// Expected fps value
     bool        m_doDecoding;       /// If we don't have any video analysis - received frames should not be decoded
 
-    FrameCircularBuffer*    m_pFrameBuffer; /// Pointer to circular buffer for frames exchange with analyzer (must be set from outside)
-
     /// AVLib related stuff
     AVFormatContext*        m_pInputContext;
     AVCodecContext*         m_pCodecContext;
@@ -52,7 +48,7 @@ private:
     int                     m_audioStreamIndex;
     int                     m_readErrorNumber;  /// Number of read frame error in a row
     bool                    m_stop;             /// Flag to exit from while loop
-    int64_t                 m_framesToSnapshot; /// Number of frames left to next snapshot
+    int64_t                 m_framesDecoded;    /// Number of frames left to next snapshot
 
     ErrorCode   InitCapture();                      /// All init and allocation AVLib routines
     ErrorCode   DecodeSingleKey(AVPacket *pPacket); /// Decode keyframe time-to-time to create snapshot

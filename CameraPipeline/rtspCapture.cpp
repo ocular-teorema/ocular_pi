@@ -5,25 +5,21 @@
 
 #include "rtspCapture.h"
 
-RTSPCapture::RTSPCapture(QString uri, FrameCircularBuffer *pFrameBuffer) :
+RTSPCapture::RTSPCapture(QString uri) :
     QObject(NULL),
     m_pCaptureTimer(NULL),
-    m_pFrameBuffer(pFrameBuffer),
     m_pInputContext(NULL),
     m_pCodecContext(NULL),
     m_pFrame(NULL),
     m_videoStreamIndex(0),
     m_audioStreamIndex(0),
     m_readErrorNumber(0),
-    m_framesToSnapshot(0)
+    m_framesDecoded(0)
 {
-    DataDirectory*            pDataDirectory = DataDirectoryInstance::instance();
-
-    m_fps = pDataDirectory->pipelineParams.fps;
+    m_fps = 30;
     m_rtspUri = uri;
-    m_doDecoding = pDataDirectory->analysisParams.differenceBasedAnalysis ||
-                   pDataDirectory->analysisParams.motionBasedAnalysis;
-    m_doDecoding = m_doDecoding && (pFrameBuffer != NULL);
+    m_doDecoding = (DataDirectoryInstance::instance())->analysisParams.differenceBasedAnalysis ||
+                   (DataDirectoryInstance::instance())->analysisParams.motionBasedAnalysis;
 }
 
 RTSPCapture::~RTSPCapture()
@@ -48,77 +44,6 @@ RTSPCapture::~RTSPCapture()
     }
 
     DEBUG_MESSAGE0("RTSPCapture", "~RTSPCapture() finished");
-}
-
-int RTSPCapture::ProbeStreamParameters(const char *url, double *fps, int *w, int *h)
-{
-    int res;
-    int idx;
-    double detectedFps;
-    AVDictionary* opts = NULL;
-    AVFormatContext* pFmtCtx = NULL;
-
-    av_dict_set(&opts, "rtsp_transport", "tcp", 0);
-    res = avformat_open_input(&pFmtCtx, url, NULL, &opts);
-    av_dict_free(&opts);
-    if (res < 0)
-    {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture::Probe", "Failed to open stream");
-        avformat_close_input(&pFmtCtx);
-        return CAMERA_PIPELINE_ERROR;
-    }
-
-    res = avformat_find_stream_info(pFmtCtx, NULL);
-    if (res < 0)
-    {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture::Probe", "Failed to get stream info");
-        avformat_close_input(&pFmtCtx);
-        return CAMERA_PIPELINE_ERROR;
-    }
-
-    idx = av_find_best_stream(pFmtCtx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-    if (idx < 0)
-    {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture::Probe", "Failed to find video stream");
-        avformat_close_input(&pFmtCtx);
-        return CAMERA_PIPELINE_ERROR;
-    }
-
-    detectedFps = av_q2d(pFmtCtx->streams[idx]->avg_frame_rate);
-
-    // Check if ffmpeg has not detected fps correctly
-    if (0 >= pFmtCtx->streams[idx]->avg_frame_rate.num)
-    {
-        AVPacket    pkt;
-        int         packetCount = 0;
-        int64_t     totalDuration = 1;
-
-        while (0 == av_read_frame(pFmtCtx, &pkt))
-        {
-            if (pkt.stream_index == idx)
-            {
-                if (!totalDuration)
-                {
-                    totalDuration = pkt.dts;
-                }
-
-                if (packetCount++ > 200)
-                {
-                    totalDuration = pkt.dts - totalDuration;
-                    break;
-                }
-            }
-        }
-        detectedFps = (double)packetCount / (double)(totalDuration * av_q2d(pFmtCtx->streams[idx]->time_base));
-    }
-
-    // Return parameters
-    *fps = (detectedFps > 0) ? detectedFps : 10.0; // 10 is some fallback value
-    *w = pFmtCtx->streams[idx]->codecpar->width;
-    *h = pFmtCtx->streams[idx]->codecpar->height;
-
-    avformat_close_input(&pFmtCtx);
-    return CAMERA_PIPELINE_OK;
 }
 
 ErrorCode RTSPCapture::DecodeSingleKey(AVPacket* pPacket)
@@ -163,9 +88,12 @@ ErrorCode RTSPCapture::InitCapture()
 
     if(!testUrl.isValid())
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Invalid rtsp url");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Invalid rtsp url");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Invalid rtsp url");
         return CAMERA_PIPELINE_ERROR;
     }
+
+    ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Connecting...");
 
     av_dict_set(&inputOptions, "rtsp_transport", "tcp", 0);
     res = avformat_open_input(&m_pInputContext, m_rtspUri.toLatin1().data(), NULL, &inputOptions);
@@ -173,14 +101,57 @@ ErrorCode RTSPCapture::InitCapture()
 
     if (res < 0)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Failed to open rtsp stream");
+        // Check return code
+        switch (res) {
+        case AVERROR_HTTP_BAD_REQUEST:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Bad request");
+            break;
+        case AVERROR_HTTP_UNAUTHORIZED:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Authorization error");
+            break;
+        case AVERROR_HTTP_FORBIDDEN:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Forbidden");
+            break;
+        case AVERROR_HTTP_NOT_FOUND:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Resource not found");
+            break;
+        case AVERROR_HTTP_SERVER_ERROR:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Internal server error");
+            break;
+        case AVERROR_HTTP_OTHER_4XX:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Unknown error");
+            break;
+        case AVERROR_INVALIDDATA:
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Invalid data (default err)");
+            break;
+        case AVERROR(ETIMEDOUT):
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Connection timed out");
+            break;
+        case AVERROR(EHOSTUNREACH):
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "No route to host");
+            break;
+        case AVERROR(ECONNREFUSED):
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Connection refused");
+            break;
+        case AVERROR(ECONNRESET):
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Connection reset by peer");
+            break;
+        case AVERROR(EPROTONOSUPPORT):
+            ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Protocol not supported");
+            break;
+        }
+
+        char err[512] = {0};
+        av_make_error_string(err, 511, res);
+        ERROR_MESSAGE1(ERR_TYPE_ERROR, "RTSPCapture", "Failed to open rtsp stream: %s", err);
         return CAMERA_PIPELINE_ERROR;
     }
 
     res = avformat_find_stream_info(m_pInputContext, NULL);
     if (res < 0)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Failed to get rtsp stream info");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Failed to get stream information");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Failed to get rtsp stream info");
         return CAMERA_PIPELINE_ERROR;
     }
 
@@ -192,15 +163,48 @@ ErrorCode RTSPCapture::InitCapture()
     m_audioStreamIndex = av_find_best_stream(m_pInputContext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if (m_videoStreamIndex < 0 || (NULL == pCodec))
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Unable to find video stream or appropriate decoder");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Bad video stream or unsupported codec");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Unable to find video stream or appropriate decoder");
         return CAMERA_PIPELINE_ERROR;
+    }
+
+    // Check for mp4 compatible audio codec format
+    // https://ru.wikipedia.org/wiki/MPEG-4_Part_14
+    if (m_audioStreamIndex >= 0 &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_AAC &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_AAC_LATM &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_MP1 &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_MP2 &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_MP3 &&
+        m_pInputContext->streams[m_audioStreamIndex]->codecpar->codec_id != AV_CODEC_ID_AC3)
+    {
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Unsupported audio codec. Audio recording will be disabled");
+        m_audioStreamIndex = -1;
+    }
+
+    // Set real framerate
+    (DataDirectoryInstance::instance())->pipelineParams.fps =
+        FFMIN(60, FFMAX(5, (int)(0.5 + av_q2d(m_pInputContext->streams[m_videoStreamIndex]->avg_frame_rate))));
+
+    // Calculate proper downscale coefficient
+    if ((DataDirectoryInstance::instance())->analysisParams.downscaleCoeff <= 0)
+    {
+        double coeff = 0.4;
+        int w = m_pInputContext->streams[m_videoStreamIndex]->codecpar->width;
+        coeff = (w > 720)  ? 0.3  : coeff;
+        coeff = (w > 1200) ? 0.25 : coeff;
+        coeff = (w > 1900) ? 0.15 : coeff;
+        coeff = (w > 2000) ? 0.10 : coeff;
+        coeff = (w > 2500) ? 0.08 : coeff;
+        (DataDirectoryInstance::instance())->analysisParams.downscaleCoeff = coeff;
     }
 
     // Create codec context
     m_pCodecContext = avcodec_alloc_context3(pCodec);
     if (NULL == m_pCodecContext)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Unable to allocate decoder context");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Internal ffmpeg error");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Unable to allocate decoder context");
         return CAMERA_PIPELINE_ERROR;
     }
 
@@ -217,7 +221,8 @@ ErrorCode RTSPCapture::InitCapture()
     res = avcodec_open2(m_pCodecContext, pCodec, NULL);
     if (res < 0)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Failed to open video decoder");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Failed to open video decoder");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Failed to open video decoder");
         return CAMERA_PIPELINE_ERROR;
     }
 
@@ -231,7 +236,8 @@ ErrorCode RTSPCapture::InitCapture()
     m_pFrame = av_frame_alloc();
     if(m_pFrame == NULL)
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "RTSPCapture", "Failed to allocate AVFrame");
+        ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Failed to allocate AVFrame");
+        ERROR_MESSAGE0(ERR_TYPE_ERROR,  "RTSPCapture", "Failed to allocate AVFrame");
         return CAMERA_PIPELINE_ERROR;
     }
 
@@ -245,6 +251,7 @@ ErrorCode RTSPCapture::InitCapture()
     QObject::connect(m_pCaptureTimer, SIGNAL(timeout()), this, SLOT(CaptureNewFrame()));
     DEBUG_MESSAGE1("RTSPCapture", "Capture thread created id = %p", QThread::currentThreadId());
 
+    ERROR_MESSAGE0(ERR_TYPE_STATUS, "RTSPCapture", "Successfully connected");
     return CAMERA_PIPELINE_OK;
 }
 
@@ -283,14 +290,13 @@ void RTSPCapture::CaptureNewFrame()
             {
                 if (pPacket->flags & AV_PKT_FLAG_KEY)
                 {
-                    // Decode single keyframe each ~6000 packets and create a snapshot from it
-                    if (m_framesToSnapshot <= 0)
+                    // Decode single keyframe each ~63 keyframes and create a snapshot from it
+                    if ((m_framesDecoded & 63) == 0)
                     {
                         DecodeSingleKey(pPacket.data());
-                        m_framesToSnapshot = 6000;
                     }
+                    m_framesDecoded++;
                 }
-                m_framesToSnapshot--;
             }
 
             pPacket->pos = QDateTime::currentMSecsSinceEpoch(); // Set server's timestamp to packet
@@ -319,7 +325,9 @@ void RTSPCapture::CaptureNewFrame()
     // Add all decoded frames to the pipeline
     if (decodeRes == 0)
     {
-        // Add new frame to analyzing circular buffer
+        m_framesDecoded++;
+
+        // Add new frame to analyzing queue
         if (m_doDecoding)
         {
             if (m_pFrame->format != AV_PIX_FMT_YUV420P && m_pFrame->format != AV_PIX_FMT_YUVJ420P)
@@ -328,11 +336,9 @@ void RTSPCapture::CaptureNewFrame()
                 return;
             }
 
-            // Save snapshot for each ~6000 frames
-            if (m_framesToSnapshot <= 0)
+            // Save snapshot for each ~4096 frames
+            if ((m_framesDecoded & 4095) == 0)
             {
-                m_framesToSnapshot = 6000;
-
                 // Create Image and store it in archive folder
                 QImage img(m_pFrame->data[0], m_pFrame->width, m_pFrame->height, m_pFrame->linesize[0], QImage::Format_Indexed8);
                 for(int i = 0; i < 256; i++)
@@ -345,7 +351,6 @@ void RTSPCapture::CaptureNewFrame()
                 thumbFile += "/thumb.jpg";
                 img.save(thumbFile);
             }
-            m_framesToSnapshot--;
 
             double frameTime = 0.0f;
             if (m_pFrame->best_effort_timestamp != AV_NOPTS_VALUE)
@@ -355,7 +360,11 @@ void RTSPCapture::CaptureNewFrame()
             else
                 frameTime = av_q2d(av_inv_q(m_pInputContext->streams[m_videoStreamIndex]->avg_frame_rate)) * m_pFrame->display_picture_number;
 
-            m_pFrameBuffer->AddFrame(m_pFrame, frameTime);
+            QSharedPointer<VideoFrame> pDecodedFrame(new VideoFrame(m_pFrame));
+            pDecodedFrame->nativeTimeInSeconds = frameTime;
+            pDecodedFrame->number = m_framesDecoded;
+
+            emit NewFrameDecoded(pDecodedFrame);
         }
     }
 
@@ -369,6 +378,7 @@ void RTSPCapture::CaptureNewFrame()
         if (m_readErrorNumber > 300 && !m_stop)
         {
             StopCapture(); // Stop further reading attempts
+            ERROR_MESSAGE0(ERR_TYPE_STATUS,   "RTSPCapture", "Error reading stream. Disconnecting.");
             ERROR_MESSAGE0(ERR_TYPE_CRITICAL, "RTSPCapture", "300 read frame errors in a row");
         }
     }

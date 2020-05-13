@@ -4,9 +4,8 @@
 
 #include "videoAnalyzer.h"
 
-VideoAnalyzer::VideoAnalyzer(FrameCircularBuffer *pFrameBuffer) :
+VideoAnalyzer::VideoAnalyzer() :
     QObject(NULL),
-    m_pInputFrameBuffer(pFrameBuffer),
     m_pProcessingTimer(NULL),
     m_pObjectDetector(NULL),
     m_pMotionEstimator(NULL)
@@ -17,15 +16,15 @@ VideoAnalyzer::VideoAnalyzer(FrameCircularBuffer *pFrameBuffer) :
 VideoAnalyzer::~VideoAnalyzer()
 {
     DEBUG_MESSAGE0("VideoAnalyzer", "~VideoAnalyzer() called");
+    SAFE_DELETE(m_pProcessingTimer);
     SAFE_DELETE(m_pObjectDetector);
     SAFE_DELETE(m_pMotionEstimator);
-    SAFE_DELETE(m_pProcessingTimer);
     DEBUG_MESSAGE0("VideoAnalyzer", "~VideoAnalyzer() finished");
 }
 
 void VideoAnalyzer::StartAnalyze()
 {
-    DEBUG_MESSAGE0("VideoAnalyzer", "Start() called");
+    DEBUG_MESSAGE0("VideoAnalyzer", "StartAnalyze() called");
 
     m_pObjectDetector = new ObjectDetector();
 
@@ -40,59 +39,60 @@ void VideoAnalyzer::StartAnalyze()
     }
     ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Every %d frame will be analyzed", m_frameStep);
 
-//    m_pProcessingTimer = new QTimer;
-//    m_pProcessingTimer->setTimerType(Qt::PreciseTimer);
-//    m_pProcessingTimer->setInterval(m_frameInterval);
-//    QObject::connect(m_pProcessingTimer, SIGNAL(timeout()), this, SLOT(DoAnalyze()));
-//    ERROR_MESSAGE1(ERR_TYPE_MESSAGE, "VideoAnalyzer", "ProcessingTimer is connected. Interval was set to %f ms", m_frameInterval);
+    if (pDataDirectory->analysisParams.differenceBasedAnalysis ||
+        pDataDirectory->analysisParams.motionBasedAnalysis)
+    {
+        m_pProcessingTimer = new QTimer;
+        if (NULL == m_pProcessingTimer)
+        {
+            ERROR_MESSAGE0(ERR_TYPE_CRITICAL, "VideoAnalyzer", "Cannot create processing timer");
+            return;
+        }
 
-//    if (NULL == m_pProcessingTimer)
-//    {
-//        ERROR_MESSAGE0(ERR_TYPE_CRITICAL, "VideoAnalyzer", "Cannot create processing timer");
-//        return;
-//    }
+        m_pProcessingTimer->setTimerType(Qt::PreciseTimer);
+        m_pProcessingTimer->setInterval(5);
+        QObject::connect(m_pProcessingTimer, SIGNAL(timeout()), this, SLOT(DoAnalyze()));
+        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "VideoAnalyzer", "ProcessingTimer is connected. Interval set to 5 ms");
 
-//    if (pDataDirectory->analysisParams.differenceBasedAnalysis ||
-//        pDataDirectory->analysisParams.motionBasedAnalysis)
-//    {
-//        m_pProcessingTimer->start();
-//    }
-//    else
-//    {
-//        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Record only mode sercted. Analysis processing timer switched off.");
-//    }
+        m_pProcessingTimer->start();
+    }
 }
 
 void VideoAnalyzer::StopAnalyze()
 {
     DEBUG_MESSAGE0("VideoAnalyzer", "Stop() called");
-    if (NULL != m_pProcessingTimer)
+    m_pProcessingTimer->stop();
+}
+
+void VideoAnalyzer::EnqueueFrame(QSharedPointer<VideoFrame> pCurrFrame)
+{
+    DEBUG_MESSAGE1("VideoAnalyzer", "Analysis started, frames in queue = %d", m_frameQueue.size());
+    m_mutex.lock();
+    if (((++m_frameNumber % m_frameStep) == 0) && m_frameQueue.size() < MAX_FRAMES_IN_QUEUE)
     {
-        m_pProcessingTimer->stop();
+        m_frameQueue.enqueue(pCurrFrame);
     }
+    else
+    {
+        ERROR_MESSAGE0(ERR_TYPE_MESSAGE, "VideoAnalyzer", "Analysis queue is full. Skipping current frame");
+    }
+    m_mutex.unlock();
 }
 
 void VideoAnalyzer::DoAnalyze()
 {
-    VideoFrame*     pCurrFrame = NULL;
+    DEBUG_MESSAGE1("VideoAnalyzer", "DoAnalyze called. Frames in queue: %d", m_frameQueue.size());
 
-    DEBUG_MESSAGE1("VideoAnalyzer", "Analysis started, m_nextFrameTime = %f", m_nextFrameTime);
+    QSharedPointer<VideoFrame>  pCurrFrame(NULL);
 
-    // Measure interframe interval and log it
-    if (m_pInputFrameBuffer == NULL)
+    m_mutex.lock();
+    if (!m_frameQueue.empty())
     {
-        ERROR_MESSAGE0(ERR_TYPE_ERROR, "VideoAnalyzer", "Invalid input frame buffer pointer");
-        return;
+        pCurrFrame = m_frameQueue.dequeue();
     }
+    m_mutex.unlock();
 
-    // Try to get new frame
-    m_pInputFrameBuffer->GetFrame(&pCurrFrame);
-
-    // Send ping that analysis is alive and keeps reading frames
-    emit Ping("VideoAnalyzer", HANG_TIMEOUT_MSEC);
-
-    // Analyze every n-th frame
-    if (pCurrFrame != NULL && ((++m_frameNumber % m_frameStep) == 0))
+    if (!pCurrFrame.isNull())
     {
         // Zero current results
         currentResults.timestamp = pCurrFrame->userTimestamp;
@@ -103,7 +103,7 @@ void VideoAnalyzer::DoAnalyze()
         currentResults.objects.clear();
 
         // Main analysis here
-        ProcessFrame(pCurrFrame);
+        ProcessFrame(pCurrFrame.data());
 
         DEBUG_MESSAGE2("VideoAnalyzer",
                        "Analysis finished. FrameMotion = %f, Objects count = %d",
@@ -113,6 +113,8 @@ void VideoAnalyzer::DoAnalyze()
         // Inform that analysis is done
         emit AnalysisFinished(pCurrFrame, &currentResults);
     }
+    // Send ping that analysis is alive and keeps reading frames
+    emit Ping("VideoAnalyzer", HANG_TIMEOUT_MSEC);
 }
 
 void VideoAnalyzer::ProcessNewStats(QList<IntervalStatistics *> curStatsList)
