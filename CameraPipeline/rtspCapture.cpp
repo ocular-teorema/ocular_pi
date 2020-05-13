@@ -361,6 +361,7 @@ void RTSPCapture::CaptureNewFrame()
                 frameTime = av_q2d(av_inv_q(m_pInputContext->streams[m_videoStreamIndex]->avg_frame_rate)) * m_pFrame->display_picture_number;
 
             QSharedPointer<VideoFrame> pDecodedFrame(new VideoFrame(m_pFrame));
+            pDecodedFrame->userTimestamp = QDateTime::currentDateTime().toMSecsSinceEpoch();
             pDecodedFrame->nativeTimeInSeconds = frameTime;
             pDecodedFrame->number = m_framesDecoded;
 
